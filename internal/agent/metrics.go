@@ -118,3 +118,17 @@ func NewMetricsDicts() *MetricsDics {
 
 	return &dict
 }
+
+func (md *MetricsDics) updateMetrics() {
+	// получаем данные мониторинга
+	runtimeStats := runtime.MemStats{}
+	runtime.ReadMemStats(&runtimeStats)
+
+	// обновляем данные мониторинга по списку, обновляем счетчики
+	for _, metric := range md.GaugeDict {
+		metric.value = metric.pullValue(&runtimeStats)
+	}
+	for _, ct := range md.CounterDict {
+		ct.value = ct.calculateNextValue(ct)
+	}
+}

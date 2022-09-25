@@ -2,7 +2,6 @@ package agent
 
 import (
 	"fmt"
-	"runtime"
 	"time"
 )
 
@@ -47,25 +46,13 @@ func NewAgent() *Agent {
 }
 
 func (a *Agent) RefreshStats() {
-	// получаем данные мониторинга
-	runtimeStats := runtime.MemStats{}
-	runtime.ReadMemStats(&runtimeStats)
-
-	// обновляем данные мониторинга по списку, обновляем счетчики
-	for _, metric := range a.metrics.GaugeDict {
-		metric.value = metric.pullValue(&runtimeStats)
-	}
-	for _, ct := range a.metrics.CounterDict {
-		ct.value = ct.calculateNextValue(ct)
-	}
-
+	a.metrics.updateMetrics()
 	fmt.Println("Runtime stats updated")
+	fmt.Println(a.metrics.CounterDict["PollCount"])
 }
 
 func (a *Agent) UploadStats() {
-	fmt.Println("Upload stats", a.buildStatUploadUrl("Type", "Title", "value"))
-}
-
-func (a *Agent) buildStatUploadUrl(metricType string, metricTitle string, metricValue string) string {
-	return fmt.Sprintf(a.config.Http.UrlTemplate, a.config.Http.Server, a.config.Http.Port, metricType, metricTitle, metricValue)
+	uploader := NewUploader(&a.config.Http)
+	uploader.SendStat(a.metrics)
+	fmt.Println("Upload stats")
 }
