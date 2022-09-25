@@ -49,15 +49,14 @@ func NewAgent() *Agent {
 func (a *Agent) RefreshStats() {
 	// получаем данные мониторинга
 	runtimeStats := runtime.MemStats{}
-
-	// обновляем данные мониторинга по списку
 	runtime.ReadMemStats(&runtimeStats)
 
+	// обновляем данные мониторинга по списку, обновляем счетчики
 	for _, metric := range a.metrics.GaugeDict {
-		metric.value = metric.initValue(&runtimeStats)
+		metric.value = metric.pullValue(&runtimeStats)
 	}
 	for _, ct := range a.metrics.CounterDict {
-		ct.value = ct.initValue(ct)
+		ct.value = ct.calculateNextValue(ct)
 	}
 
 	fmt.Println("Runtime stats updated")

@@ -12,104 +12,104 @@ type MetricsDics struct {
 
 type GaugeMetric struct {
 	value     gauge
-	initValue func(stats *runtime.MemStats) gauge
+	pullValue func(stats *runtime.MemStats) gauge
 }
 
 type CounterMetric struct {
-	value     counter
-	initValue func(c *CounterMetric) counter
+	value              counter
+	calculateNextValue func(c *CounterMetric) counter
 }
 
 func NewMetricsDicts() *MetricsDics {
 	dict := MetricsDics{
 		GaugeDict: map[string]*GaugeMetric{
-			"Alloc": {initValue: func(stats *runtime.MemStats) gauge {
+			"Alloc": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.Alloc)
 			}},
-			"BuckHashSys": {initValue: func(stats *runtime.MemStats) gauge {
+			"BuckHashSys": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.BuckHashSys)
 			}},
-			"Frees": {initValue: func(stats *runtime.MemStats) gauge {
+			"Frees": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.Frees)
 			}},
-			"GCCPUFraction": {initValue: func(stats *runtime.MemStats) gauge {
+			"GCCPUFraction": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.GCCPUFraction)
 			}},
-			"GCSys": {initValue: func(stats *runtime.MemStats) gauge {
+			"GCSys": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.GCSys)
 			}},
-			"HeapAlloc": {initValue: func(stats *runtime.MemStats) gauge {
+			"HeapAlloc": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.HeapAlloc)
 			}},
-			"HeapIdle": {initValue: func(stats *runtime.MemStats) gauge {
+			"HeapIdle": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.HeapIdle)
 			}},
-			"HeapInuse": {initValue: func(stats *runtime.MemStats) gauge {
+			"HeapInuse": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.HeapInuse)
 			}},
-			"HeapObjects": {initValue: func(stats *runtime.MemStats) gauge {
+			"HeapObjects": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.HeapObjects)
 			}},
-			"HeapReleased": {initValue: func(stats *runtime.MemStats) gauge {
+			"HeapReleased": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.HeapReleased)
 			}},
-			"HeapSys": {initValue: func(stats *runtime.MemStats) gauge {
+			"HeapSys": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.HeapSys)
 			}},
-			"LastGC": {initValue: func(stats *runtime.MemStats) gauge {
+			"LastGC": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.LastGC)
 			}},
-			"Lookups": {initValue: func(stats *runtime.MemStats) gauge {
+			"Lookups": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.Lookups)
 			}},
-			"MCacheInuse": {initValue: func(stats *runtime.MemStats) gauge {
+			"MCacheInuse": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.MCacheInuse)
 			}},
-			"MCacheSys": {initValue: func(stats *runtime.MemStats) gauge {
+			"MCacheSys": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.MCacheSys)
 			}},
-			"MSpanInuse": {initValue: func(stats *runtime.MemStats) gauge {
+			"MSpanInuse": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.MSpanInuse)
 			}},
-			"MSpanSys": {initValue: func(stats *runtime.MemStats) gauge {
+			"MSpanSys": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.MSpanSys)
 			}},
-			"Mallocs": {initValue: func(stats *runtime.MemStats) gauge {
+			"Mallocs": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.Mallocs)
 			}},
-			"NextGC": {initValue: func(stats *runtime.MemStats) gauge {
+			"NextGC": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.NextGC)
 			}},
-			"NumForcedGC": {initValue: func(stats *runtime.MemStats) gauge {
+			"NumForcedGC": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.NumForcedGC)
 			}},
-			"NumGC": {initValue: func(stats *runtime.MemStats) gauge {
+			"NumGC": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.NumGC)
 			}},
-			"OtherSys": {initValue: func(stats *runtime.MemStats) gauge {
+			"OtherSys": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.OtherSys)
 			}},
-			"PauseTotalNs": {initValue: func(stats *runtime.MemStats) gauge {
+			"PauseTotalNs": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.PauseTotalNs)
 			}},
-			"StackInuse": {initValue: func(stats *runtime.MemStats) gauge {
+			"StackInuse": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.StackInuse)
 			}},
-			"StackSys": {initValue: func(stats *runtime.MemStats) gauge {
+			"StackSys": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.StackSys)
 			}},
-			"Sys": {initValue: func(stats *runtime.MemStats) gauge {
+			"Sys": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.Sys)
 			}},
-			"TotalAlloc": {initValue: func(stats *runtime.MemStats) gauge {
+			"TotalAlloc": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(stats.TotalAlloc)
 			}},
-			"RandomValue": {initValue: func(stats *runtime.MemStats) gauge {
+			"RandomValue": {pullValue: func(stats *runtime.MemStats) gauge {
 				return gauge(rand.Float64())
 			}},
 		},
 		CounterDict: map[string]*CounterMetric{
-			"PollCount": {initValue: func(c *CounterMetric) counter {
+			"PollCount": {calculateNextValue: func(c *CounterMetric) counter {
 				nextVal := c.value + 1
 				return counter(nextVal)
 			}},
