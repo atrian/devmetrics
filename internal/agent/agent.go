@@ -48,11 +48,11 @@ func NewAgent() *Agent {
 func (a *Agent) RefreshStats() {
 	a.metrics.updateMetrics()
 	fmt.Println("Runtime stats updated")
-	fmt.Println(a.metrics.CounterDict["PollCount"])
+	fmt.Println(a.metrics.CounterDict["PollCount"].value)
 }
 
 func (a *Agent) UploadStats() {
-	uploader := NewUploader(&a.config.Http)
+	uploader := NewUploader(&a.config.HTTP)
 	uploader.SendStat(a.metrics)
 	fmt.Println("Upload stats")
 }

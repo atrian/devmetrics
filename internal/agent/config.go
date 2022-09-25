@@ -6,7 +6,7 @@ import (
 
 type Config struct {
 	Agent AgentConfig
-	Http  HttpConfig
+	HTTP  HTTPConfig
 }
 
 type AgentConfig struct {
@@ -14,10 +14,10 @@ type AgentConfig struct {
 	ReportInterval time.Duration
 }
 
-type HttpConfig struct {
+type HTTPConfig struct {
 	Server      string
 	Port        uint
-	UrlTemplate string
+	URLTemplate string
 	ContentType string
 }
 
@@ -29,7 +29,7 @@ func NewConfig() *Config {
 
 func (config *Config) loadDefaultConfiguration() {
 	config.loadAgentConfig()
-	config.loadHttpConfig()
+	config.loadHTTPConfig()
 }
 
 func (config *Config) loadAgentConfig() {
@@ -39,11 +39,11 @@ func (config *Config) loadAgentConfig() {
 	}
 }
 
-func (config *Config) loadHttpConfig() {
-	config.Http = HttpConfig{
+func (config *Config) loadHTTPConfig() {
+	config.HTTP = HTTPConfig{
 		Server:      "127.0.0.1",
 		Port:        8080,
-		UrlTemplate: "http://%v:%d/update/%v/%v/%v", // http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
+		URLTemplate: "http://%v:%d/update/%v/%v/%v", // http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
 		ContentType: "Content-Type: text/plain",
 	}
 }
