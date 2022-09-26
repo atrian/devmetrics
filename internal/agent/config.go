@@ -44,6 +44,6 @@ func (config *Config) loadHTTPConfig() {
 		Server:      "127.0.0.1",
 		Port:        8080,
 		URLTemplate: "http://%v:%d/update/%v/%v/%v", // http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
-		ContentType: "Content-Type: text/plain",
+		ContentType: "text/plain",
 	}
 }

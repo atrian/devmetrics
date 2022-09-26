@@ -42,6 +42,8 @@ func (uploader *Uploader) sendRequest(endpoint string) {
 		os.Exit(1)
 	}
 
+	request.Header.Set("Content-Type", uploader.config.ContentType)
+
 	response, err := uploader.client.Do(request)
 	if err != nil {
 		fmt.Println(err)
