@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"github.com/atrian/devmetrics/internal/appconfig"
 	"time"
 )
 
@@ -11,7 +12,7 @@ type (
 )
 
 type Agent struct {
-	config  *Config
+	config  *appconfig.Config
 	metrics *MetricsDics
 }
 
@@ -39,7 +40,7 @@ func (a *Agent) Run() {
 
 func NewAgent() *Agent {
 	agent := &Agent{
-		config:  NewConfig(),
+		config:  appconfig.NewConfig(),
 		metrics: NewMetricsDicts(),
 	}
 	return agent

@@ -2,16 +2,17 @@ package agent
 
 import (
 	"fmt"
+	"github.com/atrian/devmetrics/internal/appconfig"
 	"net/http"
 	"os"
 )
 
 type Uploader struct {
 	client *http.Client
-	config *HTTPConfig
+	config *appconfig.HTTPConfig
 }
 
-func NewUploader(config *HTTPConfig) *Uploader {
+func NewUploader(config *appconfig.HTTPConfig) *Uploader {
 	uploader := Uploader{
 		client: &http.Client{},
 		config: config,
