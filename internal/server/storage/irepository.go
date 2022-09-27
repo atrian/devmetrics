@@ -5,9 +5,9 @@ type (
 	counter int64
 )
 
-type repository interface {
+type Repository interface {
 	StoreGauge(name string, value gauge) bool
-	GetGauge(name string) gauge
+	GetGauge(name string) float64
 	StoreCounter(name string, value counter) bool
-	GetCounter(name string) counter
+	GetCounter(name string) int64
 }

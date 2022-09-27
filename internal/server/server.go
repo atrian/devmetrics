@@ -3,10 +3,12 @@ package server
 import (
 	"fmt"
 	"github.com/atrian/devmetrics/internal/appconfig"
+	"github.com/atrian/devmetrics/internal/server/storage"
 )
 
 type Server struct {
-	config *appconfig.Config
+	config  *appconfig.Config
+	storage storage.Repository
 }
 
 func (s *Server) Run() {
@@ -15,7 +17,8 @@ func (s *Server) Run() {
 
 func NewServer() *Server {
 	server := Server{
-		config: appconfig.NewConfig(),
+		config:  appconfig.NewConfig(),
+		storage: storage.NewMemoryStorage(),
 	}
 
 	return &server

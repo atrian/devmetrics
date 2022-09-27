@@ -6,7 +6,7 @@ import (
 )
 
 func TestStorage_StoreCounter(t *testing.T) {
-	storage := NewStorage()
+	storage := NewMemoryStorage()
 	res := storage.StoreCounter("notAllowedKey", counter(1))
 
 	// функция вернула false т.к. нет такого ключа в мапе
@@ -25,14 +25,14 @@ func TestStorage_StoreCounter(t *testing.T) {
 }
 
 func TestStorage_GetCounter(t *testing.T) {
-	storage := NewStorage()
+	storage := NewMemoryStorage()
 	storage.StoreCounter("PollCount", counter(1585))
 
 	assert.Equal(t, int64(1585), storage.GetCounter("PollCount")) // значение можно получить через метод и оно совпадает с ожидаемым
 }
 
 func TestStorage_StoreGauge(t *testing.T) {
-	storage := NewStorage()
+	storage := NewMemoryStorage()
 	res := storage.StoreGauge("notAllowedKey", gauge(1))
 
 	// функция вернула false т.к. нет такого ключа в мапе
@@ -51,7 +51,7 @@ func TestStorage_StoreGauge(t *testing.T) {
 }
 
 func TestStorage_GetGauge(t *testing.T) {
-	storage := NewStorage()
+	storage := NewMemoryStorage()
 	storage.StoreGauge("Alloc", gauge(777))
 
 	assert.Equal(t, float64(777), storage.GetGauge("Alloc"))
