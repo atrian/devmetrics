@@ -17,7 +17,7 @@ type Server struct {
 func (s *Server) Run() {
 	fmt.Printf("Starting server at %v port:%d\n", s.config.HTTP.Server, s.config.HTTP.Port)
 
-	var handler = handlers.NewHandler()
+	var handler = handlers.NewUpdateMetricHandler()
 
 	http.HandleFunc("/update/", handler.UpdateMetric)
 

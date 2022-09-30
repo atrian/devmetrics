@@ -3,13 +3,16 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"github.com/atrian/devmetrics/internal/appconfig"
 	"github.com/atrian/devmetrics/internal/server/storage"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
-type Handler struct {
+type UpdateMetricHandler struct {
 	storage storage.Repository
+	config  appconfig.Config
 }
 
 type metricCandidate struct {
@@ -18,22 +21,29 @@ type metricCandidate struct {
 	metricValue string
 }
 
-func NewHandler() *Handler {
-	return &Handler{storage: storage.NewMemoryStorage()}
+func NewUpdateMetricHandler() *UpdateMetricHandler {
+	return &UpdateMetricHandler{storage: storage.NewMemoryStorage()}
 }
 
-func (h Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
+func (h UpdateMetricHandler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Only POST requests are allowed!", http.StatusMethodNotAllowed)
+		return
+	}
+
 	// Отлпдочная информация по запросу
 	fmt.Println(r.Method)
 	fmt.Println(r.URL)
 
 	badRequestFlag := false
+	var actualMetricValue string
 	metricCandidate, err := validateRequest(r)
 
 	if err != nil {
-		// Bad bad request...
-		badRequestFlag = true
 		fmt.Println("Всё пропало")
+		http.Error(w, "Can't validate update request", http.StatusBadRequest)
+		return
 	}
 
 	fmt.Println("------------------")
@@ -46,6 +56,7 @@ func (h Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 			// значение успешно сохранено
 			fmt.Printf("Gauge metric %v stored with value %v\n",
 				metricCandidate.metricTitle, metricCandidate.metricValue)
+			actualMetricValue = metricCandidate.metricValue
 		} else {
 			badRequestFlag = true
 			fmt.Println("Cant store Gauge metric")
@@ -58,6 +69,7 @@ func (h Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 			// значение успешно сохранено
 			fmt.Printf("Counter metric %v stored. Current value is: %v\n",
 				metricCandidate.metricTitle, h.storage.GetCounter(metricCandidate.metricTitle))
+			actualMetricValue = strconv.Itoa(int(h.storage.GetCounter(metricCandidate.metricTitle)))
 		} else {
 			badRequestFlag = true
 			fmt.Println("Cant store Counter metric")
@@ -65,9 +77,16 @@ func (h Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if badRequestFlag == true {
-		fmt.Println("Bad Request")
+		fmt.Println("Cant store metric")
+		http.Error(w, "Cant store metric", http.StatusBadRequest)
 	} else {
 		fmt.Println("Request OK")
+
+		w.Header().Set("content-type", "text/plain")
+		// устанавливаем статус-код 200
+		w.WriteHeader(http.StatusOK)
+
+		fmt.Fprint(w, actualMetricValue)
 	}
 }
 
