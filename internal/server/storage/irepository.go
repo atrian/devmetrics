@@ -6,8 +6,8 @@ type (
 )
 
 type Repository interface {
-	StoreGauge(name string, value gauge) bool
+	StoreGauge(name string, value string) bool
 	GetGauge(name string) float64
-	StoreCounter(name string, value counter) bool
+	StoreCounter(name string, value string) bool
 	GetCounter(name string) int64
 }

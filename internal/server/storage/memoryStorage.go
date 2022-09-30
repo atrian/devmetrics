@@ -1,5 +1,7 @@
 package storage
 
+import "strconv"
+
 type MemoryStorage struct {
 	metrics *MetricsDics
 }
@@ -9,9 +11,13 @@ func NewMemoryStorage() *MemoryStorage {
 	return &storage
 }
 
-func (s MemoryStorage) StoreGauge(name string, value gauge) bool {
+func (s MemoryStorage) StoreGauge(name string, value string) bool {
 	if _, ok := s.metrics.GaugeDict[name]; ok == true {
-		s.metrics.GaugeDict[name] = value
+		value, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return false
+		}
+		s.metrics.GaugeDict[name] = gauge(value)
 		return true
 	}
 	return false
@@ -21,9 +27,13 @@ func (s MemoryStorage) GetGauge(name string) float64 {
 	return float64(s.metrics.GaugeDict[name])
 }
 
-func (s MemoryStorage) StoreCounter(name string, value counter) bool {
+func (s MemoryStorage) StoreCounter(name string, value string) bool {
 	if _, ok := s.metrics.CounterDict[name]; ok == true {
-		s.metrics.CounterDict[name] += value
+		intVal, err := strconv.Atoi(value)
+		if err != nil {
+			return false
+		}
+		s.metrics.CounterDict[name] += counter(intVal)
 		return true
 	}
 	return false
