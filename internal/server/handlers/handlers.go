@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"fmt"
 	"github.com/atrian/devmetrics/internal/appconfig"
 	"github.com/atrian/devmetrics/internal/server/storage"
@@ -38,11 +37,11 @@ func (h UpdateMetricHandler) UpdateMetric(w http.ResponseWriter, r *http.Request
 
 	badRequestFlag := false
 	var actualMetricValue string
-	metricCandidate, err := validateRequest(r)
+	metricCandidate, statusCode := validateRequest(r)
 
-	if err != nil {
+	if statusCode != http.StatusOK {
 		fmt.Println("Всё пропало")
-		http.Error(w, "Can't validate update request", http.StatusNotFound)
+		http.Error(w, "Can't validate update request", statusCode)
 		return
 	}
 
@@ -91,13 +90,13 @@ func (h UpdateMetricHandler) UpdateMetric(w http.ResponseWriter, r *http.Request
 }
 
 // валидируем запрос и в случае если все ок отдаем метрику на сохранение
-func validateRequest(r *http.Request) (*metricCandidate, error) {
+func validateRequest(r *http.Request) (*metricCandidate, int) {
 
 	endpointParts := endpointParser(r.URL.Path)
 	metricCandidate := metricCandidate{}
 
 	if len(endpointParts) < 4 {
-		return &metricCandidate, errors.New("not found")
+		return &metricCandidate, http.StatusNotFound
 	}
 
 	// endpointParts[1] ТИП_МЕТРИКИ gauge, counter
@@ -105,14 +104,14 @@ func validateRequest(r *http.Request) (*metricCandidate, error) {
 	// endpointParts[3] ЗНАЧЕНИЕ_МЕТРИКИ
 
 	if endpointParts[1] != "gauge" && endpointParts[1] != "counter" {
-		return &metricCandidate, errors.New("not found")
+		return &metricCandidate, http.StatusNotImplemented
 	}
 
 	metricCandidate.metricType = endpointParts[1]
 	metricCandidate.metricTitle = endpointParts[2]
 	metricCandidate.metricValue = endpointParts[3]
 
-	return &metricCandidate, nil
+	return &metricCandidate, http.StatusOK
 }
 
 // разбираем URL.Path в слайс по "/"

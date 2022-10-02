@@ -33,10 +33,10 @@ func TestUpdateMetricHandler(t *testing.T) {
 			"3.0402",
 			http.StatusOK,
 		}, {
-			"Invalid metric request",
+			"Not implemented metric request",
 			"http://localhost:8080/update/gaugeInvalid/InvalidMetrics/6",
 			"Can't validate update request\n",
-			http.StatusNotFound,
+			http.StatusNotImplemented,
 		}, {
 			"Request without ID",
 			"http://localhost:8080/update/gauge/",
