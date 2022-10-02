@@ -12,7 +12,7 @@ func NewMemoryStorage() *MemoryStorage {
 }
 
 func (s MemoryStorage) StoreGauge(name string, value string) bool {
-	if _, ok := s.metrics.GaugeDict[name]; ok == true {
+	if _, ok := s.metrics.GaugeDict[name]; ok {
 		value, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			return false
@@ -28,7 +28,7 @@ func (s MemoryStorage) GetGauge(name string) float64 {
 }
 
 func (s MemoryStorage) StoreCounter(name string, value string) bool {
-	if _, ok := s.metrics.CounterDict[name]; ok == true {
+	if _, ok := s.metrics.CounterDict[name]; ok {
 		intVal, err := strconv.Atoi(value)
 		if err != nil {
 			return false

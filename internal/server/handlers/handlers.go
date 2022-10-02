@@ -51,7 +51,7 @@ func (h UpdateMetricHandler) UpdateMetric(w http.ResponseWriter, r *http.Request
 	fmt.Println("------------------")
 
 	if metricCandidate.metricType == "gauge" {
-		if res := h.storage.StoreGauge(metricCandidate.metricTitle, metricCandidate.metricValue); res == true {
+		if res := h.storage.StoreGauge(metricCandidate.metricTitle, metricCandidate.metricValue); res {
 
 			// значение успешно сохранено
 			fmt.Printf("Gauge metric %v stored with value %v\n",
@@ -64,7 +64,7 @@ func (h UpdateMetricHandler) UpdateMetric(w http.ResponseWriter, r *http.Request
 	}
 
 	if metricCandidate.metricType == "counter" {
-		if res := h.storage.StoreCounter(metricCandidate.metricTitle, metricCandidate.metricValue); res == true {
+		if res := h.storage.StoreCounter(metricCandidate.metricTitle, metricCandidate.metricValue); res {
 
 			// значение успешно сохранено
 			fmt.Printf("Counter metric %v stored. Current value is: %v\n",
@@ -76,7 +76,7 @@ func (h UpdateMetricHandler) UpdateMetric(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	if badRequestFlag == true {
+	if badRequestFlag {
 		fmt.Println("Cant store metric")
 		http.Error(w, "Cant store metric", http.StatusBadRequest)
 	} else {
@@ -97,7 +97,7 @@ func validateRequest(r *http.Request) (*metricCandidate, error) {
 	metricCandidate := metricCandidate{}
 
 	if len(endpointParts) < 4 {
-		return &metricCandidate, errors.New("Bad request")
+		return &metricCandidate, errors.New("bad request")
 	}
 
 	// endpointParts[1] ТИП_МЕТРИКИ gauge, counter
@@ -105,7 +105,7 @@ func validateRequest(r *http.Request) (*metricCandidate, error) {
 	// endpointParts[3] ЗНАЧЕНИЕ_МЕТРИКИ
 
 	if endpointParts[1] != "gauge" && endpointParts[1] != "counter" {
-		return &metricCandidate, errors.New("Bad request")
+		return &metricCandidate, errors.New("bad request")
 	}
 
 	metricCandidate.metricType = endpointParts[1]
@@ -118,9 +118,6 @@ func validateRequest(r *http.Request) (*metricCandidate, error) {
 // разбираем URL.Path в слайс по "/"
 func endpointParser(endpoint string) []string {
 	return strings.FieldsFunc(endpoint, func(r rune) bool {
-		if r == '/' {
-			return true
-		}
-		return false
+		return r == '/'
 	})
 }
