@@ -33,15 +33,15 @@ func TestUpdateMetricHandler(t *testing.T) {
 			"3.0402",
 			http.StatusOK,
 		}, {
-			"InvalidMetrics metric request",
-			"http://localhost:8080/update/gauge/InvalidMetrics/6",
-			"Cant store metric\n",
-			http.StatusBadRequest,
-		}, {
-			"InvalidMetrics metric types",
-			"http://localhost:8080/update/invalidtype/InvalidMetrics/6",
+			"Invalid metric request",
+			"http://localhost:8080/update/gaugeInvalid/InvalidMetrics/6",
 			"Can't validate update request\n",
-			http.StatusBadRequest,
+			http.StatusNotFound,
+		}, {
+			"Request without ID",
+			"http://localhost:8080/update/gauge/",
+			"Can't validate update request\n",
+			http.StatusNotFound,
 		},
 	}
 
@@ -108,6 +108,7 @@ func TestUpdateCounterMetricAccumulatingValues(t *testing.T) {
 	defer secondResponse.Body.Close()
 
 	assert.Equal(t, "7", string(secondResponseBody))
+
 }
 
 // Рыба этого теста сгенерирована через Golang

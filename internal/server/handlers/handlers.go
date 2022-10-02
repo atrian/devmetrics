@@ -42,7 +42,7 @@ func (h UpdateMetricHandler) UpdateMetric(w http.ResponseWriter, r *http.Request
 
 	if err != nil {
 		fmt.Println("Всё пропало")
-		http.Error(w, "Can't validate update request", http.StatusBadRequest)
+		http.Error(w, "Can't validate update request", http.StatusNotFound)
 		return
 	}
 
@@ -97,7 +97,7 @@ func validateRequest(r *http.Request) (*metricCandidate, error) {
 	metricCandidate := metricCandidate{}
 
 	if len(endpointParts) < 4 {
-		return &metricCandidate, errors.New("bad request")
+		return &metricCandidate, errors.New("not found")
 	}
 
 	// endpointParts[1] ТИП_МЕТРИКИ gauge, counter
@@ -105,7 +105,7 @@ func validateRequest(r *http.Request) (*metricCandidate, error) {
 	// endpointParts[3] ЗНАЧЕНИЕ_МЕТРИКИ
 
 	if endpointParts[1] != "gauge" && endpointParts[1] != "counter" {
-		return &metricCandidate, errors.New("bad request")
+		return &metricCandidate, errors.New("not found")
 	}
 
 	metricCandidate.metricType = endpointParts[1]

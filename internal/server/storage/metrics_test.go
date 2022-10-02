@@ -7,12 +7,8 @@ import (
 
 func TestStorage_StoreCounter(t *testing.T) {
 	storage := NewMemoryStorage()
-	res := storage.StoreCounter("notAllowedKey", "1")
 
-	// функция вернула false т.к. нет такого ключа в мапе
-	assert.Equal(t, false, res)
-
-	res = storage.StoreCounter("PollCount", "1")
+	res := storage.StoreCounter("PollCount", "1")
 
 	// функция вернула true т.к. ключ есть
 	assert.Equal(t, true, res)
@@ -33,12 +29,8 @@ func TestStorage_GetCounter(t *testing.T) {
 
 func TestStorage_StoreGauge(t *testing.T) {
 	storage := NewMemoryStorage()
-	res := storage.StoreGauge("notAllowedKey", "1")
 
-	// функция вернула false т.к. нет такого ключа в мапе
-	assert.Equal(t, false, res)
-
-	res = storage.StoreGauge("Alloc", "1")
+	res := storage.StoreGauge("Alloc", "1")
 
 	// функция вернула true т.к. ключ есть
 	assert.Equal(t, true, res)
