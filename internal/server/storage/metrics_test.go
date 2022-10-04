@@ -24,7 +24,9 @@ func TestStorage_GetCounter(t *testing.T) {
 	storage := NewMemoryStorage()
 	storage.StoreCounter("PollCount", "1585")
 
-	assert.Equal(t, int64(1585), storage.GetCounter("PollCount")) // значение можно получить через метод и оно совпадает с ожидаемым
+	val, exist := storage.GetCounter("PollCount")
+	assert.Equal(t, true, exist)
+	assert.Equal(t, int64(1585), val) // значение можно получить через метод и оно совпадает с ожидаемым
 }
 
 func TestStorage_StoreGauge(t *testing.T) {
@@ -46,5 +48,7 @@ func TestStorage_GetGauge(t *testing.T) {
 	storage := NewMemoryStorage()
 	storage.StoreGauge("Alloc", "777")
 
-	assert.Equal(t, float64(777), storage.GetGauge("Alloc"))
+	val, exist := storage.GetGauge("Alloc")
+	assert.Equal(t, true, exist)
+	assert.Equal(t, float64(777), val)
 }
