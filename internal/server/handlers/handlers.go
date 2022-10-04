@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/atrian/devmetrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
+	"html/template"
 	"net/http"
 	"strconv"
 )
@@ -38,9 +39,14 @@ func NewHandler() *Handler {
 // получение всех сохраненных метрик в html формате GET /
 func (h *Handler) GetMetrics() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		html, err := template.ParseFiles("internal/server/templates/metricTemplate.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("All metrics request"))
+		html.Execute(w, h.storage.GetMetrics())
 	}
 }
 

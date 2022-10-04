@@ -10,4 +10,5 @@ type Repository interface {
 	GetGauge(name string) (float64, bool)
 	StoreCounter(name string, value string) bool
 	GetCounter(name string) (int64, bool)
+	GetMetrics() *MetricsDics
 }

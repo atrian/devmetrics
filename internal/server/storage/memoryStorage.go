@@ -1,6 +1,8 @@
 package storage
 
-import "strconv"
+import (
+	"strconv"
+)
 
 type MemoryStorage struct {
 	metrics *MetricsDics
@@ -37,4 +39,8 @@ func (s MemoryStorage) StoreCounter(name string, value string) bool {
 func (s MemoryStorage) GetCounter(name string) (int64, bool) {
 	value, exist := s.metrics.CounterDict[name]
 	return int64(value), exist
+}
+
+func (s MemoryStorage) GetMetrics() *MetricsDics {
+	return s.metrics
 }
