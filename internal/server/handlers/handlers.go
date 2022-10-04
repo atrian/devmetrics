@@ -66,7 +66,6 @@ func (h *Handler) GetMetric() http.HandlerFunc {
 				http.Error(w, "gauge not found", http.StatusNotFound)
 				return
 			}
-			break
 
 		case "counter":
 			if metricValue, exist := h.storage.GetCounter(metricTitle); exist {
@@ -77,7 +76,7 @@ func (h *Handler) GetMetric() http.HandlerFunc {
 				http.Error(w, "counter not found", http.StatusNotFound)
 				return
 			}
-			break
+
 		default:
 			http.Error(w, "Not implemented", http.StatusNotImplemented)
 			return
