@@ -1,139 +1,94 @@
 package handlers
 
-/*
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 )
 
-// тест сделан по мотивам ролика justforfunc #16: unit testing HTTP servers
-func TestUpdateMetricHandler(t *testing.T) {
+func TestNewHandler(t *testing.T) {
+	r := NewHandler()
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	// тестовые кейсы из прошлых инкрементов
 	tt := []struct {
 		testName     string
+		method       string
 		endpoint     string
 		expectedBody string
 		statusCode   int
 	}{
 		{
 			"Counter metric with valid params",
-			"http://localhost:8080/update/counter/PollCount/3",
+			"POST",
+			"/update/counter/PollCount/3",
 			"3",
 			http.StatusOK,
 		}, {
 			"Counter metric with invalid params",
-			"http://localhost:8080/update/counter/PollCount/3+",
+			"POST",
+			"/update/counter/PollCount/3+",
 			"Cant store metric\n",
 			http.StatusBadRequest,
 		}, {
 			"Gauge metric with valid params",
-			"http://localhost:8080/update/gauge/RandomValue/3.0402",
+			"POST",
+			"/update/gauge/RandomValue/3.0402",
 			"3.0402",
 			http.StatusOK,
 		}, {
 			"Not implemented metric request",
-			"http://localhost:8080/update/gaugeInvalid/InvalidMetrics/6",
-			"Can't validate update request\n",
+			"POST",
+			"/update/gaugeInvalid/InvalidMetrics/6",
+			"Not implemented\n",
 			http.StatusNotImplemented,
 		}, {
 			"Request without ID",
-			"http://localhost:8080/update/gauge/",
-			"Can't validate update request\n",
+			"POST",
+			"/update/gauge/",
+			"404 page not found\n",
 			http.StatusNotFound,
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.testName, func(t *testing.T) {
-			request, err := http.NewRequest(http.MethodPost, tc.endpoint, nil)
-			if err != nil {
-				t.Fatalf("Could not create request: %v", err)
-			}
-
-			// создаем экземпляр хендлера и рекордер ответа сервера
-			handler := NewUpdateMetricHandler()
-			responseRecorder := httptest.NewRecorder()
-			handler.UpdateMetric(responseRecorder, request)
-			response := responseRecorder.Result()
-
-			assert.Equal(t, tc.statusCode, response.StatusCode)
-
-			body, err := io.ReadAll(response.Body)
-			if err != nil {
-				t.Fatalf("Could not read response body: %v", err)
-			}
-			defer response.Body.Close()
-
-			assert.Equal(t, tc.expectedBody, string(body))
+			statusCode, body := testRequest(t, ts, tc.method, tc.endpoint)
+			assert.Equal(t, tc.statusCode, statusCode)
+			assert.Equal(t, tc.expectedBody, body)
 		})
 	}
 }
 
-// Тестируем суммирование счетчика CounterMetric
-func TestUpdateCounterMetricAccumulatingValues(t *testing.T) {
-	// Первый запрос на обновление метрики счетчика
-	request, err := http.NewRequest(http.MethodPost, "http://localhost:8080/update/counter/PollCount/3", nil)
-	if err != nil {
-		t.Fatalf("Could not create request: %v", err)
-	}
+func TestUpdateCounterInSeries(t *testing.T) {
+	r := NewHandler()
+	ts := httptest.NewServer(r)
+	defer ts.Close()
 
-	// создаем экземпляр хендлера и рекордер ответа сервера
-	handler := NewUpdateMetricHandler()
-	responseRecorder := httptest.NewRecorder()
-	handler.UpdateMetric(responseRecorder, request)
-	response := responseRecorder.Result()
-
-	firtsResponseBody, err := io.ReadAll(response.Body)
-	if err != nil {
-		t.Fatalf("Could not read response body: %v", err)
-	}
-	defer response.Body.Close()
-	assert.Equal(t, "3", string(firtsResponseBody))
-
-	// второй запрос на обновление метрики счетчика
-	request2, err := http.NewRequest(http.MethodPost, "http://localhost:8080/update/counter/PollCount/4", nil)
-	if err != nil {
-		t.Fatalf("Could not create request: %v", err)
-	}
-	secondRecorder := httptest.NewRecorder()
-	handler.UpdateMetric(secondRecorder, request2)
-	secondResponse := secondRecorder.Result()
-
-	secondResponseBody, err := io.ReadAll(secondResponse.Body)
-	if err != nil {
-		t.Fatalf("Could not read response body: %v", err)
-	}
-	defer secondResponse.Body.Close()
-
-	assert.Equal(t, "7", string(secondResponseBody))
-
+	// последовательное сохранение значения счетчика
+	_, _ = testRequest(t, ts, "POST", "/update/counter/TestCounter/5")
+	_, _ = testRequest(t, ts, "POST", "/update/counter/TestCounter/8")
+	statusCode, body := testRequest(t, ts, "GET", "/value/counter/TestCounter")
+	assert.Equal(t, http.StatusOK, statusCode)
+	assert.Equal(t, "13", body)
 }
 
-// Рыба этого теста сгенерирована через Golang
-func Test_endpointParser(t *testing.T) {
-	type args struct {
-		endpoint string
-	}
-	tests := []struct {
-		name string
-		args args
-		want []string
-	}{
-		{
-			name: "Base endpointParser usage",
-			args: args{endpoint: "/update/counter/PollCount/3"},
-			want: []string{"update", "counter", "PollCount", "3"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := endpointParser(tt.args.endpoint); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("endpointParser() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+// Ctrl-c Ctrl-v из учебника практикума.
+func testRequest(t *testing.T, ts *httptest.Server, method, path string) (int, string) {
+	req, err := http.NewRequest(method, ts.URL+path, nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	defer resp.Body.Close()
+
+	return resp.StatusCode, string(respBody)
 }
-*/
