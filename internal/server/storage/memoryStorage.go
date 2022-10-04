@@ -20,8 +20,9 @@ func (s MemoryStorage) StoreGauge(name string, value string) bool {
 	return true
 }
 
-func (s MemoryStorage) GetGauge(name string) float64 {
-	return float64(s.metrics.GaugeDict[name])
+func (s MemoryStorage) GetGauge(name string) (float64, bool) {
+	value, exist := s.metrics.GaugeDict[name]
+	return float64(value), exist
 }
 
 func (s MemoryStorage) StoreCounter(name string, value string) bool {
@@ -33,6 +34,7 @@ func (s MemoryStorage) StoreCounter(name string, value string) bool {
 	return true
 }
 
-func (s MemoryStorage) GetCounter(name string) int64 {
-	return int64(s.metrics.CounterDict[name])
+func (s MemoryStorage) GetCounter(name string) (int64, bool) {
+	value, exist := s.metrics.CounterDict[name]
+	return int64(value), exist
 }

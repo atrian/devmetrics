@@ -17,12 +17,10 @@ type Server struct {
 func (s *Server) Run() {
 	fmt.Printf("Starting server at %v port:%d\n", s.config.HTTP.Server, s.config.HTTP.Port)
 
-	var handler = handlers.NewUpdateMetricHandler()
-
-	http.HandleFunc("/update/", handler.UpdateMetric)
+	var handler = handlers.NewHandler()
 
 	// запуск сервера с адресом localhost, порт 8080
-	log.Fatal(http.ListenAndServe(fmt.Sprintf("%v:%d", s.config.HTTP.Server, s.config.HTTP.Port), nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%v:%d", s.config.HTTP.Server, s.config.HTTP.Port), handler))
 }
 
 func NewServer() *Server {
