@@ -8,21 +8,19 @@ import (
 func TestStorage_StoreCounter(t *testing.T) {
 	storage := NewMemoryStorage()
 
-	res := storage.StoreCounter("PollCount", "1")
+	storage.StoreCounter("PollCount", int64(1))
 
-	// функция вернула true т.к. ключ есть
-	assert.Equal(t, true, res)
 	// значение сохранилось в мапе
 	assert.Equal(t, counter(1), storage.metrics.CounterDict["PollCount"])
 
-	storage.StoreCounter("PollCount", "2022")
+	storage.StoreCounter("PollCount", int64(2022))
 	// при последующем сохранении значение увеличилось а не перезаписалось 2022 + 1
 	assert.Equal(t, counter(2023), storage.metrics.CounterDict["PollCount"])
 }
 
 func TestStorage_GetCounter(t *testing.T) {
 	storage := NewMemoryStorage()
-	storage.StoreCounter("PollCount", "1585")
+	storage.StoreCounter("PollCount", 1585)
 
 	val, exist := storage.GetCounter("PollCount")
 	assert.Equal(t, true, exist)
@@ -32,21 +30,19 @@ func TestStorage_GetCounter(t *testing.T) {
 func TestStorage_StoreGauge(t *testing.T) {
 	storage := NewMemoryStorage()
 
-	res := storage.StoreGauge("Alloc", "1")
+	storage.StoreGauge("Alloc", float64(1))
 
-	// функция вернула true т.к. ключ есть
-	assert.Equal(t, true, res)
 	// значение сохранилось в мапе по ключу Alloc
 	assert.Equal(t, gauge(1), storage.metrics.GaugeDict["Alloc"])
 
-	storage.StoreGauge("Alloc", "777")
+	storage.StoreGauge("Alloc", float64(777))
 	// при последующем сохранении значение перезаписалось
 	assert.Equal(t, gauge(777), storage.metrics.GaugeDict["Alloc"])
 }
 
 func TestStorage_GetGauge(t *testing.T) {
 	storage := NewMemoryStorage()
-	storage.StoreGauge("Alloc", "777")
+	storage.StoreGauge("Alloc", float64(777))
 
 	val, exist := storage.GetGauge("Alloc")
 	assert.Equal(t, true, exist)

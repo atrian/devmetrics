@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/atrian/devmetrics/internal/dto"
 	"log"
 	"net/http"
 	"os"
@@ -26,7 +27,7 @@ func NewUploader(config *appconfig.HTTPConfig) *Uploader {
 
 // SendStat отправка метрик на сервер
 func (uploader *Uploader) SendStat(metrics *MetricsDics) {
-	/*for key, metric := range metrics.GaugeDict {
+	for key, metric := range metrics.GaugeDict {
 		jsonMetric, err := json.Marshal(&dto.Metrics{
 			ID:    key,
 			MType: "gauge",
@@ -54,8 +55,10 @@ func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 		}
 
 		uploader.sendRequest(jsonMetric)
-	}*/
+	}
+}
 
+func (uploader *Uploader) SendAllStats(metrics *MetricsDics) {
 	exportedMetrics := metrics.exportMetrics()
 	fmt.Println(exportedMetrics)
 

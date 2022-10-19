@@ -145,7 +145,29 @@ func (h *Handler) GetJSONMetric() http.HandlerFunc {
 // UpdateJSONMetric обновление метрик POST /update в JSON
 func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		metrics := unmarshallMetrics(r.Body)
+		metric := unmarshallMetric(r.Body)
+
+		switch metric.MType {
+		case "gauge":
+			h.storage.StoreGauge(metric.ID, *metric.Value)
+		case "counter":
+			h.storage.StoreCounter(metric.ID, *metric.Delta)
+		default:
+		}
+
+		w.Header().Set("content-type", "application/json") // TODO убрать?
+		// устанавливаем статус-код 200
+		w.WriteHeader(http.StatusOK)
+
+		json.NewEncoder(w).Encode(metric)
+		fmt.Println("Request OK", metric)
+	}
+}
+
+// UpdateJSONMetrics обновление метрик POST /update в JSON
+func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		metrics := unmarshallMetrics(r)
 
 		for key, metricCandidate := range metrics {
 			fmt.Println("------------------")
@@ -160,7 +182,7 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 			}
 		}
 
-		w.Header().Set("content-type", "text/plain") // TODO убрать?
+		w.Header().Set("content-type", "application/json") // TODO убрать?
 		// устанавливаем статус-код 200
 		w.WriteHeader(http.StatusOK)
 		fmt.Println("Request OK")
@@ -229,9 +251,10 @@ func (h *Handler) UpdateMetric() http.HandlerFunc {
 	}
 }
 
-func unmarshallMetrics(body io.ReadCloser) []dto.Metrics {
-	decoder := json.NewDecoder(body)
-	var metrics []dto.Metrics
+func unmarshallMetrics(r *http.Request) []dto.Metrics {
+
+	decoder := json.NewDecoder(r.Body)
+	metrics := make([]dto.Metrics, 0, 10)
 	err := decoder.Decode(&metrics)
 	if err != nil {
 		panic(err)
@@ -239,6 +262,7 @@ func unmarshallMetrics(body io.ReadCloser) []dto.Metrics {
 
 	return metrics // TODO возвращать ошибку если неудалось разобрать JSON
 }
+
 func unmarshallMetric(body io.ReadCloser) *dto.Metrics {
 	decoder := json.NewDecoder(body)
 	var metric dto.Metrics
