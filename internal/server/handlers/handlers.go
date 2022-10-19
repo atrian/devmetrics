@@ -97,9 +97,7 @@ func (h *Handler) GetMetric() http.HandlerFunc {
 // GetJSONMetric получение метрик GET /value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>
 func (h *Handler) GetJSONMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		r.Header.Set("Content-Type", "application/json") //TODO убрать отсюда работу с заголовками, сделать через конфиг
-
+		w.Header().Set("Content-Type", "application/json") //TODO убрать отсюда работу с заголовками, сделать через конфиг
 		metricCandidate := unmarshallMetric(r.Body)
 
 		switch metricCandidate.MType {
