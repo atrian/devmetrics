@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/atrian/devmetrics/internal/appconfig"
-	"github.com/atrian/devmetrics/internal/dto"
 )
 
 type Uploader struct {
@@ -27,7 +26,7 @@ func NewUploader(config *appconfig.HTTPConfig) *Uploader {
 
 // SendStat отправка метрик на сервер
 func (uploader *Uploader) SendStat(metrics *MetricsDics) {
-	for key, metric := range metrics.GaugeDict {
+	/*for key, metric := range metrics.GaugeDict {
 		jsonMetric, err := json.Marshal(&dto.Metrics{
 			ID:    key,
 			MType: "gauge",
@@ -55,7 +54,19 @@ func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 		}
 
 		uploader.sendRequest(jsonMetric)
+	}*/
+
+	exportedMetrics := metrics.exportMetrics()
+	fmt.Println(exportedMetrics)
+
+	jsonMetrics, err := json.Marshal(exportedMetrics)
+
+	if err != nil {
+		log.Fatal("can't marshal metrics to JSON")
 	}
+
+	fmt.Println(string(jsonMetrics))
+	uploader.sendRequest(jsonMetrics)
 }
 
 // отправка запроса, обработка ответа

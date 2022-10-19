@@ -145,30 +145,25 @@ func (h *Handler) GetJSONMetric() http.HandlerFunc {
 // UpdateJSONMetric обновление метрик POST /update в JSON
 func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		metrics := unmarshallMetrics(r.Body)
 
-		actualMetricValue := ""
+		for key, metricCandidate := range metrics {
+			fmt.Println("------------------")
+			log.Println(key, metricCandidate)
 
-		metricCandidate := unmarshallMetric(r.Body)
-
-		fmt.Println("------------------")
-		log.Println(metricCandidate)
-		fmt.Println("------------------")
-
-		if metricCandidate.MType == "gauge" {
-			h.storage.StoreGauge(metricCandidate.ID, *metricCandidate.Value)
-			actualMetricValue = fmt.Sprintf("%f", *metricCandidate.Value)
+			switch metricCandidate.MType {
+			case "gauge":
+				h.storage.StoreGauge(metricCandidate.ID, *metricCandidate.Value)
+			case "counter":
+				h.storage.StoreCounter(metricCandidate.ID, *metricCandidate.Delta)
+			default:
+			}
 		}
 
-		if metricCandidate.MType == "counter" {
-			h.storage.StoreCounter(metricCandidate.ID, *metricCandidate.Delta)
-			actualMetricValue = strconv.Itoa(int(*metricCandidate.Delta))
-		}
-
-		fmt.Println("Request OK")
-		w.Header().Set("content-type", "text/plain")
+		w.Header().Set("content-type", "text/plain") // TODO убрать?
 		// устанавливаем статус-код 200
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, actualMetricValue)
+		fmt.Println("Request OK")
 
 	}
 }
@@ -234,13 +229,23 @@ func (h *Handler) UpdateMetric() http.HandlerFunc {
 	}
 }
 
-func unmarshallMetric(body io.ReadCloser) *dto.Metrics {
+func unmarshallMetrics(body io.ReadCloser) []dto.Metrics {
 	decoder := json.NewDecoder(body)
-	var metricCandidate dto.Metrics
-	err := decoder.Decode(&metricCandidate)
+	var metrics []dto.Metrics
+	err := decoder.Decode(&metrics)
 	if err != nil {
 		panic(err)
 	}
 
-	return &metricCandidate
+	return metrics // TODO возвращать ошибку если неудалось разобрать JSON
+}
+func unmarshallMetric(body io.ReadCloser) *dto.Metrics {
+	decoder := json.NewDecoder(body)
+	var metric dto.Metrics
+	err := decoder.Decode(&metric)
+	if err != nil {
+		panic(err)
+	}
+
+	return &metric
 }

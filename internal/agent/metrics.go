@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/atrian/devmetrics/internal/dto"
 	"math/rand"
 	"runtime"
 )
@@ -141,4 +142,28 @@ func (md *MetricsDics) updateMetrics() {
 	for _, ct := range md.CounterDict {
 		ct.value = ct.calculateNextValue(ct)
 	}
+}
+
+func (md *MetricsDics) exportMetrics() *[]dto.Metrics {
+	exportedData := make([]dto.Metrics, 0, len(md.GaugeDict)+len(md.CounterDict))
+
+	for key, metric := range md.GaugeDict {
+		exportedData = append(exportedData, dto.Metrics{
+			ID:    key,
+			MType: "gauge",
+			Delta: nil,
+			Value: metric.getGaugeValue(),
+		})
+	}
+
+	for key, ct := range md.CounterDict {
+		exportedData = append(exportedData, dto.Metrics{
+			ID:    key,
+			MType: "counter",
+			Delta: ct.getCounterValue(),
+			Value: nil,
+		})
+	}
+
+	return &exportedData
 }
