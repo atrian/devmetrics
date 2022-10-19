@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/atrian/devmetrics/internal/appconfig"
 	"github.com/atrian/devmetrics/internal/dto"
-	"io"
 	"log"
 	"net/http"
 )
@@ -92,19 +91,15 @@ func (uploader *Uploader) sendRequest(body []byte) {
 	// устанавливаем заголовки
 	request.Header.Set("Content-Type", uploader.config.ContentType)
 
-	response, err := uploader.client.Do(request)
+	resp, err := uploader.client.Do(request)
 	if err != nil {
 		fmt.Println(err)
 		//os.Exit(1)
 	}
 
-	// go vet - response body must be closed
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			fmt.Println(err)
-		}
-	}(response.Body)
+	fmt.Println(resp)
+
+	defer resp.Body.Close()
 }
 
 // построение целевого адреса для отправки метрики
