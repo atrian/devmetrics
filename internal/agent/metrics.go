@@ -16,9 +16,8 @@ type GaugeMetric struct {
 	pullValue func(stats *runtime.MemStats) gauge
 }
 
-func (g *GaugeMetric) getGaugeValue() *float64 {
-	floatValue := float64(g.value)
-	return &floatValue
+func (g *GaugeMetric) getGaugeValue() float64 {
+	return float64(g.value)
 }
 
 type CounterMetric struct {
@@ -26,9 +25,8 @@ type CounterMetric struct {
 	calculateNextValue func(c *CounterMetric) counter
 }
 
-func (c *CounterMetric) getCounterValue() *int64 {
-	intValue := int64(c.value)
-	return &intValue
+func (c *CounterMetric) getCounterValue() int64 {
+	return int64(c.value)
 }
 
 func NewMetricsDicts() *MetricsDics {
@@ -148,19 +146,21 @@ func (md *MetricsDics) exportMetrics() *[]dto.Metrics {
 	exportedData := make([]dto.Metrics, 0, len(md.GaugeDict)+len(md.CounterDict))
 
 	for key, metric := range md.GaugeDict {
+		gaugeValue := metric.getGaugeValue()
 		exportedData = append(exportedData, dto.Metrics{
 			ID:    key,
 			MType: "gauge",
 			Delta: nil,
-			Value: metric.getGaugeValue(),
+			Value: &gaugeValue,
 		})
 	}
 
 	for key, ct := range md.CounterDict {
+		counterValue := ct.getCounterValue()
 		exportedData = append(exportedData, dto.Metrics{
 			ID:    key,
 			MType: "counter",
-			Delta: ct.getCounterValue(),
+			Delta: &counterValue,
 			Value: nil,
 		})
 	}

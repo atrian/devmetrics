@@ -27,11 +27,13 @@ func NewUploader(config *appconfig.HTTPConfig) *Uploader {
 // SendStat отправка метрик на сервер
 func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 	for key, metric := range metrics.GaugeDict {
+		fmt.Println("Gauge:", key, metric)
+		gaugeValue := metric.getGaugeValue()
 		jsonMetric, err := json.Marshal(&dto.Metrics{
 			ID:    key,
 			MType: "gauge",
 			Delta: nil,
-			Value: metric.getGaugeValue(),
+			Value: &gaugeValue,
 		})
 
 		if err != nil {
@@ -42,10 +44,12 @@ func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 	}
 
 	for key, metric := range metrics.CounterDict {
+		fmt.Println("Counter:", key, metric)
+		counterValue := metric.getCounterValue()
 		jsonMetric, err := json.Marshal(&dto.Metrics{
 			ID:    key,
 			MType: "counter",
-			Delta: metric.getCounterValue(),
+			Delta: &counterValue,
 			Value: nil,
 		})
 
@@ -74,6 +78,7 @@ func (uploader *Uploader) SendAllStats(metrics *MetricsDics) {
 // отправка запроса, обработка ответа
 func (uploader *Uploader) sendRequest(body []byte) {
 
+	fmt.Println("sendRequest:", string(body))
 	// строим адрес сервера
 	endpoint := uploader.buildStatUploadURL()
 	fmt.Println(endpoint)
