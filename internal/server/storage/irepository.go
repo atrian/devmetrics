@@ -6,9 +6,9 @@ type (
 )
 
 type Repository interface {
-	StoreGauge(name string, value string) bool
+	StoreGauge(name string, value float64)
 	GetGauge(name string) (float64, bool)
-	StoreCounter(name string, value string) bool
+	StoreCounter(name string, value int64)
 	GetCounter(name string) (int64, bool)
 	GetMetrics() *MetricsDics
 }

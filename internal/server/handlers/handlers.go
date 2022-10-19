@@ -146,7 +146,6 @@ func (h *Handler) GetJSONMetric() http.HandlerFunc {
 func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		badRequestFlag := false
 		actualMetricValue := ""
 
 		metricCandidate := unmarshallMetric(r.Body)
@@ -156,43 +155,21 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 		fmt.Println("------------------")
 
 		if metricCandidate.MType == "gauge" {
-			if res := h.storage.StoreGauge(metricCandidate.ID, fmt.Sprintf("%f", *metricCandidate.Value)); res {
-				actualMetricValue = fmt.Sprintf("%f", *metricCandidate.Value)
-				// значение успешно сохранено
-				fmt.Printf("Gauge metric %v stored with value %v\n",
-					metricCandidate.ID, *metricCandidate.Value)
-			} else {
-				badRequestFlag = true
-				fmt.Println("Cant store Gauge metric")
-			}
+			h.storage.StoreGauge(metricCandidate.ID, *metricCandidate.Value)
+			actualMetricValue = fmt.Sprintf("%f", *metricCandidate.Value)
 		}
 
 		if metricCandidate.MType == "counter" {
-			if res := h.storage.StoreCounter(metricCandidate.ID, fmt.Sprintf("%v", *metricCandidate.Delta)); res {
-
-				// значение успешно сохранено
-				counterVal, _ := h.storage.GetCounter(metricCandidate.ID)
-				fmt.Printf("Counter metric %v stored. Current value is: %v\n",
-					metricCandidate.ID, counterVal)
-				actualMetricValue = strconv.Itoa(int(counterVal))
-			} else {
-				badRequestFlag = true
-				fmt.Println("Cant store Counter metric")
-			}
+			h.storage.StoreCounter(metricCandidate.ID, *metricCandidate.Delta)
+			actualMetricValue = strconv.Itoa(int(*metricCandidate.Delta))
 		}
 
-		if badRequestFlag {
-			fmt.Println("Cant store metric")
-			http.Error(w, "Cant store metric", http.StatusBadRequest)
-		} else {
-			fmt.Println("Request OK")
+		fmt.Println("Request OK")
+		w.Header().Set("content-type", "text/plain")
+		// устанавливаем статус-код 200
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, actualMetricValue)
 
-			w.Header().Set("content-type", "text/plain")
-			// устанавливаем статус-код 200
-			w.WriteHeader(http.StatusOK)
-
-			fmt.Fprint(w, actualMetricValue)
-		}
 	}
 }
 
@@ -216,30 +193,30 @@ func (h *Handler) UpdateMetric() http.HandlerFunc {
 		fmt.Println("------------------")
 
 		if metricType == "gauge" {
-			if res := h.storage.StoreGauge(metricTitle, metricValue); res {
-
-				// значение успешно сохранено
-				fmt.Printf("Gauge metric %v stored with value %v\n",
-					metricTitle, metricValue)
-				actualMetricValue = metricValue
-			} else {
+			floatValue, err := strconv.ParseFloat(metricValue, 64)
+			if err != nil {
 				badRequestFlag = true
-				fmt.Println("Cant store Gauge metric")
 			}
+
+			h.storage.StoreGauge(metricTitle, floatValue)
+			actualMetricValue = metricValue
+
+			fmt.Printf("Gauge metric %v stored. Current value is: %v\n",
+				metricTitle, actualMetricValue)
 		}
 
 		if metricType == "counter" {
-			if res := h.storage.StoreCounter(metricTitle, metricValue); res {
-
-				// значение успешно сохранено
-				counterVal, _ := h.storage.GetCounter(metricTitle)
-				fmt.Printf("Counter metric %v stored. Current value is: %v\n",
-					metricTitle, counterVal)
-				actualMetricValue = strconv.Itoa(int(counterVal))
-			} else {
+			intValue, err := strconv.Atoi(metricValue)
+			if err != nil {
 				badRequestFlag = true
-				fmt.Println("Cant store Counter metric")
 			}
+
+			h.storage.StoreCounter(metricTitle, int64(intValue))
+
+			counterVal, _ := h.storage.GetCounter(metricTitle)
+			actualMetricValue = strconv.Itoa(int(counterVal))
+			fmt.Printf("Gauge metric %v stored. Current value is: %v\n",
+				metricTitle, actualMetricValue)
 		}
 
 		if badRequestFlag {
