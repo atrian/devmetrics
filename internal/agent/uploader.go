@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/atrian/devmetrics/internal/appconfig"
 	"github.com/atrian/devmetrics/internal/dto"
 	"log"
 	"net/http"
-	"os"
-
-	"github.com/atrian/devmetrics/internal/appconfig"
 )
 
 type Uploader struct {
@@ -36,7 +34,7 @@ func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 		})
 
 		if err != nil {
-			log.Fatal("Can't get marshal metric")
+			panic(err)
 		}
 
 		uploader.sendRequest(jsonMetric)
@@ -51,7 +49,7 @@ func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 		})
 
 		if err != nil {
-			log.Fatal("Can't get marshal metric")
+			panic(err)
 		}
 
 		uploader.sendRequest(jsonMetric)
@@ -82,7 +80,7 @@ func (uploader *Uploader) sendRequest(body []byte) {
 	request, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(body))
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(1)
+		//os.Exit(1)
 	}
 
 	// устанавливаем заголовки
@@ -91,7 +89,7 @@ func (uploader *Uploader) sendRequest(body []byte) {
 	response, err := uploader.client.Do(request)
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(1)
+		//os.Exit(1)
 	}
 
 	// go vet - response body must be closed
