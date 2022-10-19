@@ -15,9 +15,19 @@ type GaugeMetric struct {
 	pullValue func(stats *runtime.MemStats) gauge
 }
 
+func (g *GaugeMetric) getGaugeValue() *float64 {
+	floatValue := float64(g.value)
+	return &floatValue
+}
+
 type CounterMetric struct {
 	value              counter
 	calculateNextValue func(c *CounterMetric) counter
+}
+
+func (c *CounterMetric) getCounterValue() *int64 {
+	intValue := int64(c.value)
+	return &intValue
 }
 
 func NewMetricsDicts() *MetricsDics {

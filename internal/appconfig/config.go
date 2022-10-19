@@ -15,6 +15,7 @@ type AgentConfig struct {
 }
 
 type HTTPConfig struct {
+	Protocol    string
 	Server      string
 	Port        uint
 	URLTemplate string
@@ -41,9 +42,10 @@ func (config *Config) loadAgentConfig() {
 
 func (config *Config) loadHTTPConfig() {
 	config.HTTP = HTTPConfig{
+		Protocol:    "http",
 		Server:      "127.0.0.1",
 		Port:        8080,
-		URLTemplate: "http://%v:%d/update/%v/%v/%v", // http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
-		ContentType: "text/plain",
+		URLTemplate: "%v://%v:%d/update", // <ПРОТОКОЛ>://<АДРЕС_СЕРВЕРА>/update
+		ContentType: "application/json",
 	}
 }

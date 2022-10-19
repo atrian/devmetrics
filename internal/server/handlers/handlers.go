@@ -1,12 +1,18 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/atrian/devmetrics/internal/server/storage"
-	"github.com/go-chi/chi/v5"
 	"html/template"
+	"io"
+	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/go-chi/chi/v5"
+
+	"github.com/atrian/devmetrics/internal/dto"
+	"github.com/atrian/devmetrics/internal/server/storage"
 )
 
 type Handler struct {
@@ -24,19 +30,15 @@ func NewHandler() *Handler {
 	// и значений всех известных ему на текущий момент метрик.
 	h.Get("/", h.GetMetrics())
 
-	// Сервер должен возвращать текущее значение запрашиваемой метрики в текстовом виде по запросу
-	// GET http://<АДРЕС_СЕРВЕРА>/value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ> (со статусом http.StatusOK).
-	// При попытке запроса неизвестной серверу метрики сервер должен возвращать http.StatusNotFound.
-	h.Get("/value/{metricType}/{metricTitle}", h.GetMetric())
+	h.Post("/value", h.GetJSONMetric())
 
-	// Сохранение произвольных метрик,
-	// POST /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
-	h.Post("/update/{metricType}/{metricTitle}/{metricValue}", h.UpdateMetric())
+	// Пробуем анмаршалинг
+	h.Post("/update", h.UpdateJSONMetric())
 
 	return h
 }
 
-// получение всех сохраненных метрик в html формате GET /
+// GetMetrics получение всех сохраненных метрик в html формате GET /
 func (h *Handler) GetMetrics() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		html, err := template.ParseFiles("internal/server/templates/metricTemplate.html")
@@ -50,17 +52,32 @@ func (h *Handler) GetMetrics() http.HandlerFunc {
 	}
 }
 
-// получение метрик GET /value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>
-func (h *Handler) GetMetric() http.HandlerFunc {
+// GetJSONMetric получение метрик POST /value + JSON в теле
+/*
+{
+  "id": "PollCount",
+  "type": "counter"
+}
+*/
+func (h *Handler) GetJSONMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		metricType := chi.URLParam(r, "metricType")
-		metricTitle := chi.URLParam(r, "metricTitle")
 
-		switch metricType {
+		r.Header.Set("Content-Type", "application/json") //TODO убрать отсюда работу с заголовками, сделать через конфиг
+
+		metricCandidate := unmarshallMetric(r.Body)
+
+		switch metricCandidate.MType {
 		case "gauge":
-			if metricValue, exist := h.storage.GetGauge(metricTitle); exist {
+			if metricValue, exist := h.storage.GetGauge(metricCandidate.ID); exist {
+				metricCandidate.Value = &metricValue
+				JSONMetric, err := json.Marshal(metricCandidate)
+
+				if err != nil {
+					panic(err)
+				}
+
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf("%v", metricValue)))
+				w.Write(JSONMetric)
 				return
 			} else {
 				http.Error(w, "gauge not found", http.StatusNotFound)
@@ -68,9 +85,16 @@ func (h *Handler) GetMetric() http.HandlerFunc {
 			}
 
 		case "counter":
-			if metricValue, exist := h.storage.GetCounter(metricTitle); exist {
+			if metricValue, exist := h.storage.GetCounter(metricCandidate.ID); exist {
+				metricCandidate.Delta = &metricValue
+				JSONMetric, err := json.Marshal(metricCandidate)
+
+				if err != nil {
+					panic(err)
+				}
+
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf("%v", metricValue)))
+				w.Write(JSONMetric)
 				return
 			} else {
 				http.Error(w, "counter not found", http.StatusNotFound)
@@ -84,45 +108,38 @@ func (h *Handler) GetMetric() http.HandlerFunc {
 	}
 }
 
-// обновление метрик POST /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
-func (h *Handler) UpdateMetric() http.HandlerFunc {
+// UpdateJSONMetric обновление метрик POST /update в JSON
+func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		badRequestFlag := false
-		var actualMetricValue string
+		actualMetricValue := ""
 
-		metricType := chi.URLParam(r, "metricType")
-		metricTitle := chi.URLParam(r, "metricTitle")
-		metricValue := chi.URLParam(r, "metricValue")
-
-		if metricType != "gauge" && metricType != "counter" {
-			http.Error(w, "Not implemented", http.StatusNotImplemented)
-			return
-		}
+		metricCandidate := unmarshallMetric(r.Body)
 
 		fmt.Println("------------------")
-		fmt.Println(metricType)
+		log.Println(metricCandidate)
 		fmt.Println("------------------")
 
-		if metricType == "gauge" {
-			if res := h.storage.StoreGauge(metricTitle, metricValue); res {
-
+		if metricCandidate.MType == "gauge" {
+			if res := h.storage.StoreGauge(metricCandidate.ID, fmt.Sprintf("%f", *metricCandidate.Value)); res {
+				actualMetricValue = fmt.Sprintf("%f", *metricCandidate.Value)
 				// значение успешно сохранено
 				fmt.Printf("Gauge metric %v stored with value %v\n",
-					metricTitle, metricValue)
-				actualMetricValue = metricValue
+					metricCandidate.ID, *metricCandidate.Value)
 			} else {
 				badRequestFlag = true
 				fmt.Println("Cant store Gauge metric")
 			}
 		}
 
-		if metricType == "counter" {
-			if res := h.storage.StoreCounter(metricTitle, metricValue); res {
+		if metricCandidate.MType == "counter" {
+			if res := h.storage.StoreCounter(metricCandidate.ID, fmt.Sprintf("%v", *metricCandidate.Delta)); res {
 
 				// значение успешно сохранено
-				counterVal, _ := h.storage.GetCounter(metricTitle)
+				counterVal, _ := h.storage.GetCounter(metricCandidate.ID)
 				fmt.Printf("Counter metric %v stored. Current value is: %v\n",
-					metricTitle, counterVal)
+					metricCandidate.ID, counterVal)
 				actualMetricValue = strconv.Itoa(int(counterVal))
 			} else {
 				badRequestFlag = true
@@ -143,4 +160,15 @@ func (h *Handler) UpdateMetric() http.HandlerFunc {
 			fmt.Fprint(w, actualMetricValue)
 		}
 	}
+}
+
+func unmarshallMetric(body io.ReadCloser) *dto.Metrics {
+	decoder := json.NewDecoder(body)
+	var metricCandidate dto.Metrics
+	err := decoder.Decode(&metricCandidate)
+	if err != nil {
+		panic(err)
+	}
+
+	return &metricCandidate
 }

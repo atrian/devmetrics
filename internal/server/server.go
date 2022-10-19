@@ -2,11 +2,12 @@ package server
 
 import (
 	"fmt"
+	"log"
+	"net/http"
+
 	"github.com/atrian/devmetrics/internal/appconfig"
 	"github.com/atrian/devmetrics/internal/server/handlers"
 	"github.com/atrian/devmetrics/internal/server/storage"
-	"log"
-	"net/http"
 )
 
 type Server struct {
@@ -15,7 +16,7 @@ type Server struct {
 }
 
 func (s *Server) Run() {
-	fmt.Printf("Starting server at %v port:%d\n", s.config.HTTP.Server, s.config.HTTP.Port)
+	fmt.Printf("Starting server at %v://%v port:%d\n", s.config.HTTP.Protocol, s.config.HTTP.Server, s.config.HTTP.Port)
 
 	var handler = handlers.NewHandler()
 
