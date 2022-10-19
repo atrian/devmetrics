@@ -157,13 +157,14 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 			currentValue, _ := h.storage.GetCounter(metric.ID)
 			metric.Delta = &currentValue
 		default:
+			http.Error(w, "Cant store metric", http.StatusBadRequest)
 		}
 
 		w.Header().Set("content-type", "application/json") // TODO убрать?
 		// устанавливаем статус-код 200
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Println("Request OK", metric)
+		fmt.Println("Request OK, current metric value:", metric)
 		json.NewEncoder(w).Encode(metric)
 	}
 }
@@ -194,7 +195,7 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 	}
 }
 
-// обновление метрик POST /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
+// UpdateMetric обновление метрик POST /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
 func (h *Handler) UpdateMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		badRequestFlag := false
@@ -256,9 +257,8 @@ func (h *Handler) UpdateMetric() http.HandlerFunc {
 }
 
 func unmarshallMetrics(r *http.Request) []dto.Metrics {
-
+	var metrics []dto.Metrics
 	decoder := json.NewDecoder(r.Body)
-	metrics := make([]dto.Metrics, 0, 10)
 	err := decoder.Decode(&metrics)
 	if err != nil {
 		panic(err)
@@ -268,8 +268,8 @@ func unmarshallMetrics(r *http.Request) []dto.Metrics {
 }
 
 func unmarshallMetric(body io.ReadCloser) *dto.Metrics {
-	decoder := json.NewDecoder(body)
 	var metric dto.Metrics
+	decoder := json.NewDecoder(body)
 	err := decoder.Decode(&metric)
 	if err != nil {
 		panic(err)
