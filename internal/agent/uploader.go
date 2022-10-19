@@ -99,7 +99,9 @@ func (uploader *Uploader) sendRequest(body []byte) {
 
 	fmt.Println(resp)
 
-	defer resp.Body.Close()
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 }
 
 // построение целевого адреса для отправки метрики
