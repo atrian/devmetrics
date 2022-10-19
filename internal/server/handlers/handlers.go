@@ -150,8 +150,12 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 		switch metric.MType {
 		case "gauge":
 			h.storage.StoreGauge(metric.ID, *metric.Value)
+			currentValue, _ := h.storage.GetGauge(metric.ID)
+			metric.Value = &currentValue
 		case "counter":
 			h.storage.StoreCounter(metric.ID, *metric.Delta)
+			currentValue, _ := h.storage.GetCounter(metric.ID)
+			metric.Delta = &currentValue
 		default:
 		}
 
@@ -159,8 +163,8 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 		// устанавливаем статус-код 200
 		w.WriteHeader(http.StatusOK)
 
-		json.NewEncoder(w).Encode(metric)
 		fmt.Println("Request OK", metric)
+		json.NewEncoder(w).Encode(metric)
 	}
 }
 
