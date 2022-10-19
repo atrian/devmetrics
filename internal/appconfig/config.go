@@ -45,7 +45,7 @@ func (config *Config) loadHTTPConfig() {
 		Protocol:    "http",
 		Server:      "127.0.0.1",
 		Port:        8080,
-		URLTemplate: "%v://%v:%d/update", // <ПРОТОКОЛ>://<АДРЕС_СЕРВЕРА>/update
+		URLTemplate: "%v://%v:%d/update/", // <ПРОТОКОЛ>://<АДРЕС_СЕРВЕРА>/update
 		ContentType: "application/json",
 	}
 }

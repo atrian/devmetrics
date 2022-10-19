@@ -41,7 +41,7 @@ func NewHandler() *Handler {
 
 	h.Post("/value", h.GetJSONMetric())
 	// Пробуем анмаршалинг
-	h.Post("/update", h.UpdateJSONMetric())
+	h.Post("/update/", h.UpdateJSONMetric())
 
 	return h
 }
