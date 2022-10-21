@@ -1,6 +1,9 @@
 package appconfig
 
 import (
+	"fmt"
+	"github.com/caarlos0/env/v6"
+	"log"
 	"time"
 )
 
@@ -10,14 +13,13 @@ type Config struct {
 }
 
 type AgentConfig struct {
-	PollInterval   time.Duration
-	ReportInterval time.Duration
+	PollInterval   time.Duration `env:"POLL_INTERVAL"`
+	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
 }
 
 type HTTPConfig struct {
 	Protocol    string
-	Server      string
-	Port        uint
+	Address     string `env:"ADDRESS"`
 	URLTemplate string
 	ContentType string
 }
@@ -25,6 +27,7 @@ type HTTPConfig struct {
 func NewConfig() *Config {
 	config := Config{}
 	config.loadDefaultConfiguration()
+	config.loadEnvConfiguration()
 	return &config
 }
 
@@ -43,9 +46,22 @@ func (config *Config) loadAgentConfig() {
 func (config *Config) loadHTTPConfig() {
 	config.HTTP = HTTPConfig{
 		Protocol:    "http",
-		Server:      "127.0.0.1",
-		Port:        8080,
-		URLTemplate: "%v://%v:%d/update/", // <ПРОТОКОЛ>://<АДРЕС_СЕРВЕРА>/update
+		Address:     "127.0.0.1:8080",
+		URLTemplate: "%v://%v/",
 		ContentType: "application/json",
+	}
+}
+
+func (config *Config) loadEnvConfiguration() {
+	fmt.Println("Load env configuration")
+
+	err := env.Parse(&config.HTTP)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = env.Parse(&config.Agent)
+	if err != nil {
+		log.Fatal(err)
 	}
 }

@@ -108,6 +108,5 @@ func (uploader *Uploader) sendRequest(body []byte) {
 func (uploader *Uploader) buildStatUploadURL() string {
 	return fmt.Sprintf(uploader.config.URLTemplate,
 		uploader.config.Protocol,
-		uploader.config.Server,
-		uploader.config.Port)
+		uploader.config.Address) + "update/"
 }

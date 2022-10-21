@@ -37,9 +37,9 @@ func TestUploader_buildStatUploadURL(t *testing.T) {
 				metricTitle: "Alloc",
 				metricValue: "0.0000",
 			},
-			want: fmt.Sprintf("http://%v:%d/update/",
-				config.HTTP.Server,
-				config.HTTP.Port,
+			want: fmt.Sprintf("%v://%v/update/",
+				config.HTTP.Protocol,
+				config.HTTP.Address,
 			),
 		},
 	}

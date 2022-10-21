@@ -16,12 +16,12 @@ type Server struct {
 }
 
 func (s *Server) Run() {
-	fmt.Printf("Starting server at %v://%v port:%d\n", s.config.HTTP.Protocol, s.config.HTTP.Server, s.config.HTTP.Port)
+	fmt.Printf("Starting server at %v\n", s.config.HTTP.Address)
 
 	var handler = handlers.NewHandler()
 
-	// запуск сервера с адресом localhost, порт 8080
-	log.Fatal(http.ListenAndServe(fmt.Sprintf("%v:%d", s.config.HTTP.Server, s.config.HTTP.Port), handler))
+	// запуск сервера, по умолчанию с адресом localhost, порт 8080
+	log.Fatal(http.ListenAndServe(s.config.HTTP.Address, handler))
 }
 
 func NewServer() *Server {
