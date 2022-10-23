@@ -3,19 +3,19 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"log"
 	"os"
 
-	"github.com/atrian/devmetrics/internal/appconfig/serverConfig"
 	"github.com/atrian/devmetrics/internal/dto"
 )
 
 type MemoryStorage struct {
 	metrics *MetricsDicts
-	config  *serverConfig.Config
+	config  *serverconfig.Config
 }
 
-func NewMemoryStorage(config *serverConfig.Config) *MemoryStorage {
+func NewMemoryStorage(config *serverconfig.Config) *MemoryStorage {
 	storage := MemoryStorage{
 		metrics: NewMetricsDicts(),
 		config:  config,

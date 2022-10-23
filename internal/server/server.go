@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"github.com/atrian/devmetrics/internal/appconfig/serverConfig"
+	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"log"
 	"net/http"
 	"time"
@@ -12,12 +12,12 @@ import (
 )
 
 type Server struct {
-	config  *serverConfig.Config
+	config  *serverconfig.Config
 	storage storage.Repository
 }
 
 func NewServer() *Server {
-	config := serverConfig.NewServerConfig()
+	config := serverconfig.NewServerConfig()
 	memoryStorage := storage.NewMemoryStorage(config)
 
 	server := Server{

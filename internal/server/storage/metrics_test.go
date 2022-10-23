@@ -1,13 +1,14 @@
 package storage
 
 import (
+	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestStorage_StoreCounter(t *testing.T) {
-	config := serverConfig.NewServerConfig()
+	config := serverconfig.NewServerConfig()
 	storage := NewMemoryStorage(config)
 
 	storage.StoreCounter("PollCount", int64(1))
@@ -21,7 +22,7 @@ func TestStorage_StoreCounter(t *testing.T) {
 }
 
 func TestStorage_GetCounter(t *testing.T) {
-	config := serverConfig.NewServerConfig()
+	config := serverconfig.NewServerConfig()
 	storage := NewMemoryStorage(config)
 	storage.StoreCounter("PollCount", 1585)
 
@@ -31,7 +32,7 @@ func TestStorage_GetCounter(t *testing.T) {
 }
 
 func TestStorage_StoreGauge(t *testing.T) {
-	config := serverConfig.NewServerConfig()
+	config := serverconfig.NewServerConfig()
 	storage := NewMemoryStorage(config)
 
 	storage.StoreGauge("Alloc", float64(1))
@@ -45,7 +46,7 @@ func TestStorage_StoreGauge(t *testing.T) {
 }
 
 func TestStorage_GetGauge(t *testing.T) {
-	config := serverConfig.NewServerConfig()
+	config := serverconfig.NewServerConfig()
 	storage := NewMemoryStorage(config)
 	storage.StoreGauge("Alloc", float64(777))
 

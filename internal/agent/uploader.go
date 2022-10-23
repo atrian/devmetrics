@@ -13,10 +13,10 @@ import (
 
 type Uploader struct {
 	client *http.Client
-	config *agentConfig.HTTPConfig
+	config *agentconfig.HTTPConfig
 }
 
-func NewUploader(config *agentConfig.HTTPConfig) *Uploader {
+func NewUploader(config *agentconfig.HTTPConfig) *Uploader {
 	uploader := Uploader{
 		client: &http.Client{},
 		config: config,

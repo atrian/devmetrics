@@ -13,7 +13,7 @@ type (
 )
 
 type Agent struct {
-	config  *agentConfig.Config
+	config  *agentconfig.Config
 	metrics *MetricsDics
 }
 
@@ -42,7 +42,7 @@ func (a *Agent) Run() {
 
 func NewAgent() *Agent {
 	agent := &Agent{
-		config:  agentConfig.NewConfig(),
+		config:  agentconfig.NewConfig(),
 		metrics: NewMetricsDicts(),
 	}
 	return agent

@@ -11,7 +11,7 @@ import (
 func TestUploader_buildStatUploadURL(t *testing.T) {
 	type fields struct {
 		client *http.Client
-		config *agentConfig.HTTPConfig
+		config *agentconfig.HTTPConfig
 	}
 	type args struct {
 		metricType  string
@@ -19,7 +19,7 @@ func TestUploader_buildStatUploadURL(t *testing.T) {
 		metricValue string
 	}
 
-	config := agentConfig.NewConfig()
+	config := agentconfig.NewConfig()
 
 	tests := []struct {
 		name   string

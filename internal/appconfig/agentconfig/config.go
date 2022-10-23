@@ -1,4 +1,4 @@
-package agentConfig
+package agentconfig
 
 import (
 	"flag"
