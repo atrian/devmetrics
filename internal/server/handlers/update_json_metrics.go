@@ -3,9 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/atrian/devmetrics/internal/dto"
 	"log"
 	"net/http"
+
+	"github.com/atrian/devmetrics/internal/dto"
 )
 
 // UpdateJSONMetrics обновление метрик POST /update в JSON

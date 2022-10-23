@@ -2,9 +2,10 @@ package agent
 
 import (
 	"fmt"
-	"github.com/atrian/devmetrics/internal/appconfig"
 	"net/http"
 	"testing"
+
+	"github.com/atrian/devmetrics/internal/appconfig"
 )
 
 func TestUploader_buildStatUploadURL(t *testing.T) {

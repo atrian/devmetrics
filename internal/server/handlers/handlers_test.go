@@ -1,15 +1,16 @@
 package handlers
 
 import (
-	"github.com/atrian/devmetrics/internal/server/storage"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/atrian/devmetrics/internal/appconfig"
+	"github.com/atrian/devmetrics/internal/server/storage"
 )
 
 func TestNewHandler(t *testing.T) {

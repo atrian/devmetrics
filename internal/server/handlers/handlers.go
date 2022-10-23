@@ -1,9 +1,10 @@
 package handlers
 
 import (
+	"github.com/go-chi/chi/v5"
+
 	"github.com/atrian/devmetrics/internal/appconfig"
 	"github.com/atrian/devmetrics/internal/server/storage"
-	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {

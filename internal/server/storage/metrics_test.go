@@ -1,9 +1,11 @@
 package storage
 
 import (
-	"github.com/atrian/devmetrics/internal/appconfig"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/atrian/devmetrics/internal/appconfig"
 )
 
 func TestStorage_StoreCounter(t *testing.T) {

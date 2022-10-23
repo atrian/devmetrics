@@ -2,8 +2,9 @@ package agent
 
 import (
 	"fmt"
-	"github.com/atrian/devmetrics/internal/appconfig"
 	"time"
+
+	"github.com/atrian/devmetrics/internal/appconfig"
 )
 
 type (

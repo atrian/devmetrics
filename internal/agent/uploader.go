@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/atrian/devmetrics/internal/appconfig"
-	"github.com/atrian/devmetrics/internal/dto"
 	"log"
 	"net/http"
+
+	"github.com/atrian/devmetrics/internal/appconfig"
+	"github.com/atrian/devmetrics/internal/dto"
 )
 
 type Uploader struct {

@@ -1,9 +1,10 @@
 package agent
 
 import (
-	"github.com/atrian/devmetrics/internal/dto"
 	"math/rand"
 	"runtime"
+
+	"github.com/atrian/devmetrics/internal/dto"
 )
 
 type MetricsDics struct {

@@ -2,12 +2,13 @@ package server
 
 import (
 	"fmt"
-	"github.com/atrian/devmetrics/internal/appconfig"
-	"github.com/atrian/devmetrics/internal/server/handlers"
-	"github.com/atrian/devmetrics/internal/server/storage"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/atrian/devmetrics/internal/appconfig"
+	"github.com/atrian/devmetrics/internal/server/handlers"
+	"github.com/atrian/devmetrics/internal/server/storage"
 )
 
 type Server struct {
