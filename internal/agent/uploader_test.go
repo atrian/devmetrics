@@ -5,13 +5,13 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/atrian/devmetrics/internal/appconfig"
+	"github.com/atrian/devmetrics/internal/appconfig/agentConfig"
 )
 
 func TestUploader_buildStatUploadURL(t *testing.T) {
 	type fields struct {
 		client *http.Client
-		config *appconfig.HTTPConfig
+		config *agentConfig.HTTPConfig
 	}
 	type args struct {
 		metricType  string
@@ -19,7 +19,7 @@ func TestUploader_buildStatUploadURL(t *testing.T) {
 		metricValue string
 	}
 
-	config := appconfig.NewServerConfig()
+	config := agentConfig.NewConfig()
 
 	tests := []struct {
 		name   string

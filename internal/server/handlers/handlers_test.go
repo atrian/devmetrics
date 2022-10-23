@@ -6,15 +6,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/atrian/devmetrics/internal/appconfig/serverConfig"
+	"github.com/atrian/devmetrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/atrian/devmetrics/internal/appconfig"
-	"github.com/atrian/devmetrics/internal/server/storage"
 )
 
 func TestNewHandler(t *testing.T) {
-	config := appconfig.NewServerConfig()
+	config := serverConfig.NewServerConfig()
 	memStorage := storage.NewMemoryStorage(config)
 	r := NewHandler(config, memStorage)
 	ts := httptest.NewServer(r)
@@ -71,7 +70,7 @@ func TestNewHandler(t *testing.T) {
 }
 
 func TestUpdateCounterInSeries(t *testing.T) {
-	config := appconfig.NewServerConfig()
+	config := serverConfig.NewServerConfig()
 	memStorage := storage.NewMemoryStorage(config)
 	r := NewHandler(config, memStorage)
 	ts := httptest.NewServer(r)

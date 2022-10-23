@@ -1,4 +1,4 @@
-package appconfig
+package serverConfig
 
 import (
 	"flag"
@@ -10,14 +10,8 @@ import (
 )
 
 type Config struct {
-	Agent  AgentConfig
 	Server ServerConfig
 	HTTP   HTTPConfig
-}
-
-type AgentConfig struct {
-	PollInterval   time.Duration `env:"POLL_INTERVAL"`
-	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
 }
 
 type ServerConfig struct {
@@ -52,22 +46,6 @@ func (config *Config) loadServerConfig() {
 	}
 }
 
-func NewAgentConfig() *Config {
-	config := Config{}
-	config.loadAgentConfig()
-	config.loadHTTPConfig()
-	config.loadAgentFlags()
-	config.loadAgentEnvConfiguration()
-	return &config
-}
-
-func (config *Config) loadAgentConfig() {
-	config.Agent = AgentConfig{
-		PollInterval:   2 * time.Second,
-		ReportInterval: 10 * time.Second,
-	}
-}
-
 func (config *Config) loadHTTPConfig() {
 	config.HTTP = HTTPConfig{
 		Protocol:    "http",
@@ -91,20 +69,6 @@ func (config *Config) loadServerEnvConfiguration() {
 	}
 }
 
-func (config *Config) loadAgentEnvConfiguration() {
-	fmt.Println("Load env configuration")
-
-	err := env.Parse(&config.HTTP)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = env.Parse(&config.Agent)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 func (config *Config) loadServerFlags() {
 	address := flag.String("a", "127.0.0.1:8080", "Address and port used for server and agent.")
 	file := flag.String("f", "/tmp/devops-metrics-db.json", "Where to store metrics dump file.")
@@ -117,16 +81,4 @@ func (config *Config) loadServerFlags() {
 	config.Server.StoreFile = *file
 	config.Server.Restore = *restore
 	config.Server.StoreInterval = time.Duration(*storeInterval) * time.Second
-}
-
-func (config *Config) loadAgentFlags() {
-	address := flag.String("a", "127.0.0.1:8080", "Address and port used for agent.")
-	reportInterval := flag.Int64("r", 10, "Metrics upload interval in seconds.")
-	pollInterval := flag.Int64("p", 2, "Metrics pool interval in seconds.")
-
-	flag.Parse()
-
-	config.HTTP.Address = *address
-	config.Agent.ReportInterval = time.Duration(*reportInterval) * time.Second
-	config.Agent.PollInterval = time.Duration(*pollInterval) * time.Second
 }

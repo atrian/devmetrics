@@ -3,17 +3,17 @@ package handlers
 import (
 	"github.com/go-chi/chi/v5"
 
-	"github.com/atrian/devmetrics/internal/appconfig"
+	"github.com/atrian/devmetrics/internal/appconfig/serverConfig"
 	"github.com/atrian/devmetrics/internal/server/storage"
 )
 
 type Handler struct {
 	*chi.Mux
 	storage storage.Repository
-	config  *appconfig.Config
+	config  *serverConfig.Config
 }
 
-func NewHandler(config *appconfig.Config, storage storage.Repository) *Handler {
+func NewHandler(config *serverConfig.Config, storage storage.Repository) *Handler {
 	h := &Handler{
 		Mux:     chi.NewMux(),
 		storage: storage,

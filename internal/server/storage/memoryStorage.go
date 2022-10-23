@@ -6,16 +6,16 @@ import (
 	"log"
 	"os"
 
-	"github.com/atrian/devmetrics/internal/appconfig"
+	"github.com/atrian/devmetrics/internal/appconfig/serverConfig"
 	"github.com/atrian/devmetrics/internal/dto"
 )
 
 type MemoryStorage struct {
 	metrics *MetricsDicts
-	config  *appconfig.Config
+	config  *serverConfig.Config
 }
 
-func NewMemoryStorage(config *appconfig.Config) *MemoryStorage {
+func NewMemoryStorage(config *serverConfig.Config) *MemoryStorage {
 	storage := MemoryStorage{
 		metrics: NewMetricsDicts(),
 		config:  config,

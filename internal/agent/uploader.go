@@ -7,16 +7,16 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/atrian/devmetrics/internal/appconfig"
+	"github.com/atrian/devmetrics/internal/appconfig/agentConfig"
 	"github.com/atrian/devmetrics/internal/dto"
 )
 
 type Uploader struct {
 	client *http.Client
-	config *appconfig.HTTPConfig
+	config *agentConfig.HTTPConfig
 }
 
-func NewUploader(config *appconfig.HTTPConfig) *Uploader {
+func NewUploader(config *agentConfig.HTTPConfig) *Uploader {
 	uploader := Uploader{
 		client: &http.Client{},
 		config: config,
