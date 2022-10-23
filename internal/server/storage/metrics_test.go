@@ -9,7 +9,7 @@ import (
 )
 
 func TestStorage_StoreCounter(t *testing.T) {
-	config := appconfig.NewConfig()
+	config := appconfig.NewServerConfig()
 	storage := NewMemoryStorage(config)
 
 	storage.StoreCounter("PollCount", int64(1))
@@ -23,7 +23,7 @@ func TestStorage_StoreCounter(t *testing.T) {
 }
 
 func TestStorage_GetCounter(t *testing.T) {
-	config := appconfig.NewConfig()
+	config := appconfig.NewServerConfig()
 	storage := NewMemoryStorage(config)
 	storage.StoreCounter("PollCount", 1585)
 
@@ -33,7 +33,7 @@ func TestStorage_GetCounter(t *testing.T) {
 }
 
 func TestStorage_StoreGauge(t *testing.T) {
-	config := appconfig.NewConfig()
+	config := appconfig.NewServerConfig()
 	storage := NewMemoryStorage(config)
 
 	storage.StoreGauge("Alloc", float64(1))
@@ -47,7 +47,7 @@ func TestStorage_StoreGauge(t *testing.T) {
 }
 
 func TestStorage_GetGauge(t *testing.T) {
-	config := appconfig.NewConfig()
+	config := appconfig.NewServerConfig()
 	storage := NewMemoryStorage(config)
 	storage.StoreGauge("Alloc", float64(777))
 

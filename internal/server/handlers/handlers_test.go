@@ -14,7 +14,7 @@ import (
 )
 
 func TestNewHandler(t *testing.T) {
-	config := appconfig.NewConfig()
+	config := appconfig.NewServerConfig()
 	memStorage := storage.NewMemoryStorage(config)
 	r := NewHandler(config, memStorage)
 	ts := httptest.NewServer(r)
@@ -71,7 +71,7 @@ func TestNewHandler(t *testing.T) {
 }
 
 func TestUpdateCounterInSeries(t *testing.T) {
-	config := appconfig.NewConfig()
+	config := appconfig.NewServerConfig()
 	memStorage := storage.NewMemoryStorage(config)
 	r := NewHandler(config, memStorage)
 	ts := httptest.NewServer(r)

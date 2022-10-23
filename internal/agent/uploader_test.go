@@ -19,7 +19,7 @@ func TestUploader_buildStatUploadURL(t *testing.T) {
 		metricValue string
 	}
 
-	config := appconfig.NewConfig()
+	config := appconfig.NewServerConfig()
 
 	tests := []struct {
 		name   string

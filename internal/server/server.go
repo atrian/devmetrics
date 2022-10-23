@@ -17,7 +17,7 @@ type Server struct {
 }
 
 func NewServer() *Server {
-	config := appconfig.NewConfig()
+	config := appconfig.NewServerConfig()
 	memoryStorage := storage.NewMemoryStorage(config)
 
 	server := Server{

@@ -41,7 +41,7 @@ func (a *Agent) Run() {
 
 func NewAgent() *Agent {
 	agent := &Agent{
-		config:  appconfig.NewConfig(),
+		config:  appconfig.NewAgentConfig(),
 		metrics: NewMetricsDicts(),
 	}
 	return agent
