@@ -60,15 +60,12 @@ func (s *Server) RunMetricsDumpTicker() {
 	fmt.Println("Run metrics dump every:", s.config.Server.StoreInterval)
 
 	go func() {
-		for {
-			select {
-			case dumpTime := <-dumpMetricsTicker.C:
-				err := s.storage.DumpToFile(s.config.Server.StoreFile)
-				if err != nil {
-					log.Fatal(err)
-				}
-				fmt.Println("Metrics dump time:", dumpTime)
+		for dumpTime := range dumpMetricsTicker.C {
+			err := s.storage.DumpToFile(s.config.Server.StoreFile)
+			if err != nil {
+				log.Fatal(err)
 			}
+			fmt.Println("Metrics dump time:", dumpTime)
 		}
 	}()
 }
