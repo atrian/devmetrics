@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/atrian/devmetrics/internal/appconfig/agentConfig"
+	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
 )
 
 type (
@@ -18,8 +18,8 @@ type Agent struct {
 }
 
 func (a *Agent) Run() {
-	fmt.Println("Agent started")
-	fmt.Println(a.config)
+	fmt.Printf("Agent started with PollInterval: %v, ReportInterval: %v, Server address: %v\n",
+		a.config.Agent.PollInterval, a.config.Agent.ReportInterval, a.config.HTTP.Address)
 
 	// запускаем тикер сбора статистики
 	refreshStatsTicker := time.NewTicker(a.config.Agent.PollInterval)

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/atrian/devmetrics/internal/appconfig/agentConfig"
+	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
 )
 
 func TestUploader_buildStatUploadURL(t *testing.T) {

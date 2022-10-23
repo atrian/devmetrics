@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/atrian/devmetrics/internal/appconfig/agentConfig"
+	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
 	"github.com/atrian/devmetrics/internal/dto"
 )
 
