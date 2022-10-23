@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/atrian/devmetrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -12,7 +13,9 @@ import (
 )
 
 func TestNewHandler(t *testing.T) {
-	r := NewHandler(appconfig.NewConfig())
+	config := appconfig.NewConfig()
+	memStorage := storage.NewMemoryStorage(config)
+	r := NewHandler(config, memStorage)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
@@ -67,7 +70,9 @@ func TestNewHandler(t *testing.T) {
 }
 
 func TestUpdateCounterInSeries(t *testing.T) {
-	r := NewHandler(appconfig.NewConfig())
+	config := appconfig.NewConfig()
+	memStorage := storage.NewMemoryStorage(config)
+	r := NewHandler(config, memStorage)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
