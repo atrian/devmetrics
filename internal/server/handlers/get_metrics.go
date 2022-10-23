@@ -14,6 +14,7 @@ func (h *Handler) GetMetrics() http.HandlerFunc {
 			return
 		}
 
+		w.Header().Set("content-type", "text/html")
 		w.WriteHeader(http.StatusOK)
 		html.Execute(w, h.storage.GetMetrics())
 	}
