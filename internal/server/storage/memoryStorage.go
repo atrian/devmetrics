@@ -3,10 +3,10 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"log"
 	"os"
 
+	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"github.com/atrian/devmetrics/internal/dto"
 )
 
@@ -47,6 +47,7 @@ func (s MemoryStorage) GetMetrics() *MetricsDicts {
 	return s.metrics
 }
 
+// DumpToFile сохраняем данные из памяти в файл в json формате
 func (s MemoryStorage) DumpToFile(filename string) error {
 	fmt.Println("Dump data to file")
 

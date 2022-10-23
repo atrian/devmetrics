@@ -5,6 +5,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
+	"github.com/atrian/devmetrics/internal/server/middlewares"
 	"github.com/atrian/devmetrics/internal/server/storage"
 )
 
@@ -21,12 +22,11 @@ func NewHandler(config *serverconfig.Config, storage storage.Repository) *Handle
 		config:  config,
 	}
 
-	// регистрируем middlewares
+	// регистрируем стандарные middlewares chi
 	h.Mux.Use(middleware.RequestID)
 	h.Mux.Use(middleware.Logger)
-
-	// gzip
-	h.Mux.Use(middleware.Compress(5))
+	// регистрируем кастомный gzip middleware
+	h.Mux.Use(middlewares.GzipHandle)
 
 	// По запросу GET http://<АДРЕС_СЕРВЕРА>/ сервер должен отдавать HTML-страничку со списком имён
 	// и значений всех известных ему на текущий момент метрик.
