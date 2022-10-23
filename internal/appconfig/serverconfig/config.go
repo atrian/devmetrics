@@ -9,6 +9,20 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+var (
+	address       *string
+	file          *string
+	restore       *bool
+	storeInterval *int64
+)
+
+func init() {
+	address = flag.String("a", "127.0.0.1:8080", "Address and port used for server and agent.")
+	file = flag.String("f", "/tmp/devops-metrics-db.json", "Where to store metrics dump file.")
+	restore = flag.Bool("r", true, "Restore metrics from dump file on server start.")
+	storeInterval = flag.Int64("i", 300, "Metrics dump interval in seconds.")
+}
+
 type Config struct {
 	Server ServerConfig
 	HTTP   HTTPConfig
@@ -70,11 +84,6 @@ func (config *Config) loadServerEnvConfiguration() {
 }
 
 func (config *Config) loadServerFlags() {
-	address := flag.String("a", "127.0.0.1:8080", "Address and port used for server and agent.")
-	file := flag.String("f", "/tmp/devops-metrics-db.json", "Where to store metrics dump file.")
-	restore := flag.Bool("r", true, "Restore metrics from dump file on server start.")
-	storeInterval := flag.Int64("i", 300, "Metrics dump interval in seconds.")
-
 	flag.Parse()
 
 	config.HTTP.Address = *address

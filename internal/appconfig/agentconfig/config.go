@@ -9,6 +9,18 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+var (
+	address        *string
+	reportInterval *time.Duration
+	pollInterval   *time.Duration
+)
+
+func init() {
+	address = flag.String("a", "127.0.0.1:8080", "Address and port used for agent.")
+	reportInterval = flag.Duration("r", 10*time.Second, "Metrics upload interval in seconds.")
+	pollInterval = flag.Duration("p", 2*time.Second, "Metrics pool interval.")
+}
+
 type Config struct {
 	Agent AgentConfig
 	HTTP  HTTPConfig
@@ -51,10 +63,6 @@ func (config *Config) loadHTTPConfig() {
 }
 
 func (config *Config) loadAgentFlags() {
-	address := flag.String("a", "127.0.0.1:8080", "Address and port used for agent.")
-	reportInterval := flag.Duration("r", 10*time.Second, "Metrics upload interval in seconds.")
-	pollInterval := flag.Duration("p", 2*time.Second, "Metrics pool interval.")
-
 	flag.Parse()
 
 	config.HTTP.Address = *address
