@@ -27,7 +27,6 @@ func NewUploader(config *agentconfig.HTTPConfig) *Uploader {
 // SendStat отправка метрик на сервер
 func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 	for key, metric := range metrics.GaugeDict {
-		fmt.Println("Gauge:", key, metric)
 		gaugeValue := metric.getGaugeValue()
 		jsonMetric, err := json.Marshal(&dto.Metrics{
 			ID:    key,
@@ -44,7 +43,6 @@ func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 	}
 
 	for key, metric := range metrics.CounterDict {
-		fmt.Println("Counter:", key, metric)
 		counterValue := metric.getCounterValue()
 		jsonMetric, err := json.Marshal(&dto.Metrics{
 			ID:    key,
@@ -63,15 +61,11 @@ func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 
 func (uploader *Uploader) SendAllStats(metrics *MetricsDics) {
 	exportedMetrics := metrics.exportMetrics()
-	fmt.Println(exportedMetrics)
-
 	jsonMetrics, err := json.Marshal(exportedMetrics)
 
 	if err != nil {
 		log.Fatal("can't marshal metrics to JSON")
 	}
-
-	fmt.Println(string(jsonMetrics))
 	uploader.sendRequest(jsonMetrics)
 }
 
@@ -81,7 +75,6 @@ func (uploader *Uploader) sendRequest(body []byte) {
 	fmt.Println("sendRequest:", string(body))
 	// строим адрес сервера
 	endpoint := uploader.buildStatUploadURL()
-	fmt.Println(endpoint)
 
 	request, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(body))
 	if err != nil {
@@ -97,8 +90,6 @@ func (uploader *Uploader) sendRequest(body []byte) {
 		fmt.Println(err)
 		//os.Exit(1)
 	}
-
-	fmt.Println(resp)
 
 	if resp != nil {
 		defer resp.Body.Close()
