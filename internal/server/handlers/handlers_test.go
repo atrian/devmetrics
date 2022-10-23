@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/atrian/devmetrics/internal/appconfig"
 )
 
 func TestNewHandler(t *testing.T) {
-	r := NewHandler()
+	r := NewHandler(appconfig.NewConfig())
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
@@ -65,7 +67,7 @@ func TestNewHandler(t *testing.T) {
 }
 
 func TestUpdateCounterInSeries(t *testing.T) {
-	r := NewHandler()
+	r := NewHandler(appconfig.NewConfig())
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
