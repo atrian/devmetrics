@@ -8,6 +8,7 @@ import (
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"github.com/atrian/devmetrics/internal/server/handlers"
+	"github.com/atrian/devmetrics/internal/server/router"
 	"github.com/atrian/devmetrics/internal/server/storage"
 )
 
@@ -32,7 +33,7 @@ func (s *Server) Run() {
 	fmt.Printf("Starting server at %v\n", s.config.HTTP.Address)
 	defer s.Stop()
 
-	handler := handlers.NewHandler(s.config, s.storage)
+	routes := router.New(handlers.New(s.config, s.storage))
 
 	// STORE_INTERVAL (по умолчанию 300) — интервал времени в секундах,
 	// по истечении которого текущие показания сервера сбрасываются на диск
@@ -51,7 +52,7 @@ func (s *Server) Run() {
 	}
 
 	// запуск сервера, по умолчанию с адресом localhost, порт 8080
-	log.Fatal(http.ListenAndServe(s.config.HTTP.Address, handler))
+	log.Fatal(http.ListenAndServe(s.config.HTTP.Address, routes))
 }
 
 func (s *Server) RunMetricsDumpTicker() {

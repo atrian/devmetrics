@@ -42,5 +42,5 @@ func unmarshallMetrics(r *http.Request) []dto.Metrics {
 		panic(err)
 	}
 
-	return metrics // TODO возвращать ошибку если неудалось разобрать JSON
+	return metrics // TODO: возвращать ошибку если неудалось разобрать JSON
 }
