@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
-	"github.com/atrian/devmetrics/internal/crypto"
 	"github.com/atrian/devmetrics/internal/server/handlers"
 	"github.com/atrian/devmetrics/internal/server/router"
 	"github.com/atrian/devmetrics/internal/server/storage"
@@ -16,7 +15,6 @@ import (
 type Server struct {
 	config  *serverconfig.Config
 	storage storage.Repository
-	hasher  crypto.Hasher
 }
 
 func NewServer() *Server {
@@ -25,7 +23,6 @@ func NewServer() *Server {
 	server := Server{
 		config:  config,
 		storage: storage.NewMemoryStorage(config),
-		hasher:  crypto.NewSha256Hasher(),
 	}
 
 	return &server
@@ -49,7 +46,7 @@ func (s *Server) Run() {
 	if s.config.Server.Restore {
 		err := s.storage.RestoreFromFile(s.config.Server.StoreFile)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
 		}
 	}
 
@@ -67,7 +64,7 @@ func (s *Server) RunMetricsDumpTicker() {
 		for dumpTime := range dumpMetricsTicker.C {
 			err := s.storage.DumpToFile(s.config.Server.StoreFile)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Println(err)
 			}
 			fmt.Println("Metrics dump time:", dumpTime)
 		}
@@ -78,6 +75,6 @@ func (s *Server) Stop() {
 	fmt.Println("Dump metrics before shutdown")
 	err := s.storage.DumpToFile(s.config.Server.StoreFile)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 }
