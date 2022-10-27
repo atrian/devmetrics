@@ -14,7 +14,7 @@ func NewSha256Hasher() *Sha256Hasher {
 
 // Hash формирует подпись для метрики
 func (s Sha256Hasher) Hash(metric string, key string) string {
-	if "" == key {
+	if key == "" {
 		return ""
 	}
 
