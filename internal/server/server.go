@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
+	"github.com/atrian/devmetrics/internal/crypto"
 	"github.com/atrian/devmetrics/internal/server/handlers"
 	"github.com/atrian/devmetrics/internal/server/router"
 	"github.com/atrian/devmetrics/internal/server/storage"
@@ -15,15 +16,16 @@ import (
 type Server struct {
 	config  *serverconfig.Config
 	storage storage.Repository
+	hasher  crypto.Hasher
 }
 
 func NewServer() *Server {
 	config := serverconfig.NewServerConfig()
-	memoryStorage := storage.NewMemoryStorage(config)
 
 	server := Server{
 		config:  config,
-		storage: memoryStorage,
+		storage: storage.NewMemoryStorage(config),
+		hasher:  crypto.NewSha256Hasher(),
 	}
 
 	return &server

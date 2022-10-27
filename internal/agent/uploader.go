@@ -4,22 +4,24 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
+	"github.com/atrian/devmetrics/internal/crypto"
 	"github.com/atrian/devmetrics/internal/dto"
 )
 
 type Uploader struct {
 	client *http.Client
-	config *agentconfig.HTTPConfig
+	config *agentconfig.Config
+	hasher crypto.Hasher
 }
 
-func NewUploader(config *agentconfig.HTTPConfig) *Uploader {
+func NewUploader(config *agentconfig.Config) *Uploader {
 	uploader := Uploader{
 		client: &http.Client{},
 		config: config,
+		hasher: crypto.NewSha256Hasher(),
 	}
 	return &uploader
 }
@@ -33,10 +35,12 @@ func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 			MType: "gauge",
 			Delta: nil,
 			Value: &gaugeValue,
+			Hash:  uploader.hasher.Hash(fmt.Sprintf("%s:gauge:%f", key, gaugeValue), uploader.config.Agent.HashKey),
 		})
 
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
+			continue
 		}
 
 		uploader.sendRequest(jsonMetric)
@@ -49,10 +53,12 @@ func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 			MType: "counter",
 			Delta: &counterValue,
 			Value: nil,
+			Hash:  uploader.hasher.Hash(fmt.Sprintf("%s:counter:%d", key, counterValue), uploader.config.Agent.HashKey),
 		})
 
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
+			continue
 		}
 
 		uploader.sendRequest(jsonMetric)
@@ -64,7 +70,8 @@ func (uploader *Uploader) SendAllStats(metrics *MetricsDics) {
 	jsonMetrics, err := json.Marshal(exportedMetrics)
 
 	if err != nil {
-		log.Fatal("can't marshal metrics to JSON")
+		fmt.Println("can't marshal metrics to JSON")
+		return
 	}
 	uploader.sendRequest(jsonMetrics)
 }
@@ -83,7 +90,7 @@ func (uploader *Uploader) sendRequest(body []byte) {
 	}
 
 	// устанавливаем заголовки
-	request.Header.Set("Content-Type", uploader.config.ContentType)
+	request.Header.Set("Content-Type", uploader.config.HTTP.ContentType)
 
 	resp, err := uploader.client.Do(request)
 	if err != nil {
@@ -98,7 +105,7 @@ func (uploader *Uploader) sendRequest(body []byte) {
 
 // построение целевого адреса для отправки метрики
 func (uploader *Uploader) buildStatUploadURL() string {
-	return fmt.Sprintf(uploader.config.URLTemplate,
-		uploader.config.Protocol,
-		uploader.config.Address) + "update/"
+	return fmt.Sprintf(uploader.config.HTTP.URLTemplate,
+		uploader.config.HTTP.Protocol,
+		uploader.config.HTTP.Address) + "update/"
 }

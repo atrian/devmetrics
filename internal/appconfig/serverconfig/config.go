@@ -12,16 +12,10 @@ import (
 var (
 	address       *string
 	file          *string
+	hashKey       *string
 	restore       *bool
 	storeInterval *time.Duration
 )
-
-func init() {
-	address = flag.String("a", "127.0.0.1:8080", "Address and port used for server and agent.")
-	file = flag.String("f", "/tmp/devops-metrics-db.json", "Where to store metrics dump file.")
-	restore = flag.Bool("r", true, "Restore metrics from dump file on server start.")
-	storeInterval = flag.Duration("i", 300*time.Second, "Metrics dump interval in seconds.")
-}
 
 type Config struct {
 	Server ServerConfig
@@ -33,6 +27,7 @@ type ServerConfig struct {
 	StoreFile          string        `env:"STORE_FILE"`
 	Restore            bool          `env:"RESTORE"`
 	MetricTemplateFile string
+	HashKey            string `env:"KEY"`
 }
 
 type HTTPConfig struct {
@@ -84,10 +79,17 @@ func (config *Config) loadServerEnvConfiguration() {
 }
 
 func (config *Config) loadServerFlags() {
+	address = flag.String("a", "127.0.0.1:8080", "Address and port used for server and agent.")
+	file = flag.String("f", "/tmp/devops-metrics-db.json", "Where to store metrics dump file.")
+	restore = flag.Bool("r", true, "Restore metrics from dump file on server start.")
+	storeInterval = flag.Duration("i", 300*time.Second, "Metrics dump interval in seconds.")
+	hashKey = flag.String("k", "", "Key for metrics sign validation")
+
 	flag.Parse()
 
 	config.HTTP.Address = *address
 	config.Server.StoreFile = *file
 	config.Server.Restore = *restore
 	config.Server.StoreInterval = *storeInterval
+	config.Server.HashKey = *hashKey
 }

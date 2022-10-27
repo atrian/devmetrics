@@ -5,6 +5,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/atrian/devmetrics/internal/server/handlers"
+	"github.com/atrian/devmetrics/internal/server/middlewares"
 )
 
 type Router struct {
@@ -15,7 +16,7 @@ type Router struct {
 func registerMiddlewares(router *Router) {
 	router.Mux.Use(middleware.RequestID)
 	router.Mux.Use(middleware.Logger)
-	router.Mux.Use(middleware.Compress(5))
+	router.Mux.Use(middlewares.GzipHandle)
 }
 
 func registerRoutes(router *Router, handler *handlers.Handler) {
