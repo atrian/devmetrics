@@ -1,12 +1,12 @@
 package storage
 
-type MetricsDics struct {
+type MetricsDicts struct {
 	GaugeDict   map[string]gauge
 	CounterDict map[string]counter
 }
 
-func NewMetricsDicts() *MetricsDics {
-	dict := MetricsDics{
+func NewMetricsDicts() *MetricsDicts {
+	dict := MetricsDicts{
 		GaugeDict:   map[string]gauge{},
 		CounterDict: map[string]counter{},
 	}

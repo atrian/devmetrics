@@ -2,15 +2,16 @@ package agent
 
 import (
 	"fmt"
-	"github.com/atrian/devmetrics/internal/appconfig"
 	"net/http"
 	"testing"
+
+	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
 )
 
 func TestUploader_buildStatUploadURL(t *testing.T) {
 	type fields struct {
 		client *http.Client
-		config *appconfig.HTTPConfig
+		config *agentconfig.HTTPConfig
 	}
 	type args struct {
 		metricType  string
@@ -18,7 +19,7 @@ func TestUploader_buildStatUploadURL(t *testing.T) {
 		metricValue string
 	}
 
-	config := appconfig.NewConfig()
+	config := agentconfig.NewConfig()
 
 	tests := []struct {
 		name   string
@@ -37,9 +38,9 @@ func TestUploader_buildStatUploadURL(t *testing.T) {
 				metricTitle: "Alloc",
 				metricValue: "0.0000",
 			},
-			want: fmt.Sprintf("http://%v:%d/update/gauge/Alloc/0.0000",
-				config.HTTP.Server,
-				config.HTTP.Port,
+			want: fmt.Sprintf("%v://%v/update/",
+				config.HTTP.Protocol,
+				config.HTTP.Address,
 			),
 		},
 	}
@@ -49,7 +50,7 @@ func TestUploader_buildStatUploadURL(t *testing.T) {
 				client: tt.fields.client,
 				config: tt.fields.config,
 			}
-			if got := uploader.buildStatUploadURL(tt.args.metricType, tt.args.metricTitle, tt.args.metricValue); got != tt.want {
+			if got := uploader.buildStatUploadURL(); got != tt.want {
 				t.Errorf("buildStatUploadURL() = %v, want %v", got, tt.want)
 			}
 		})

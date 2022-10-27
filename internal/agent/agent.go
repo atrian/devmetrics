@@ -2,8 +2,9 @@ package agent
 
 import (
 	"fmt"
-	"github.com/atrian/devmetrics/internal/appconfig"
 	"time"
+
+	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
 )
 
 type (
@@ -12,12 +13,13 @@ type (
 )
 
 type Agent struct {
-	config  *appconfig.Config
+	config  *agentconfig.Config
 	metrics *MetricsDics
 }
 
 func (a *Agent) Run() {
-	fmt.Println("Agent started")
+	fmt.Printf("Agent started with PollInterval: %v, ReportInterval: %v, Server address: %v\n",
+		a.config.Agent.PollInterval, a.config.Agent.ReportInterval, a.config.HTTP.Address)
 
 	// запускаем тикер сбора статистики
 	refreshStatsTicker := time.NewTicker(a.config.Agent.PollInterval)
@@ -40,7 +42,7 @@ func (a *Agent) Run() {
 
 func NewAgent() *Agent {
 	agent := &Agent{
-		config:  appconfig.NewConfig(),
+		config:  agentconfig.NewConfig(),
 		metrics: NewMetricsDicts(),
 	}
 	return agent
