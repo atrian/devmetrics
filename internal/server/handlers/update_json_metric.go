@@ -16,7 +16,7 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 
 		switch metric.MType {
 		case "gauge":
-			if "" != h.config.Server.HashKey && false == h.hasher.Compare(metric.Hash,
+			if h.config.Server.HashKey != "" && !h.hasher.Compare(metric.Hash,
 				fmt.Sprintf("%s:gauge:%f", metric.ID, *metric.Value),
 				h.config.Server.HashKey) {
 				http.Error(w, "Cant validate metric", http.StatusBadRequest)
@@ -26,7 +26,7 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 			currentValue, _ := h.storage.GetGauge(metric.ID)
 			metric.Value = &currentValue
 		case "counter":
-			if "" != h.config.Server.HashKey && false == h.hasher.Compare(metric.Hash,
+			if h.config.Server.HashKey != "" && !h.hasher.Compare(metric.Hash,
 				fmt.Sprintf("%s:counter:%d", metric.ID, *metric.Delta),
 				h.config.Server.HashKey) {
 				http.Error(w, "Cant validate metric", http.StatusBadRequest)

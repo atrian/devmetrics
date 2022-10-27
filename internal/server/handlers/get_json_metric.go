@@ -17,7 +17,7 @@ func (h *Handler) GetJSONMetric() http.HandlerFunc {
 			if metricValue, exist := h.storage.GetGauge(metricCandidate.ID); exist {
 
 				// подписываем метрику если установлен ключ шифрования
-				if "" != h.config.Server.HashKey {
+				if h.config.Server.HashKey != "" {
 					metricCandidate.Hash = h.hasher.Hash(fmt.Sprintf("%s:gauge:%f", metricCandidate.ID, metricValue),
 						h.config.Server.HashKey)
 				}
@@ -41,7 +41,7 @@ func (h *Handler) GetJSONMetric() http.HandlerFunc {
 			if metricValue, exist := h.storage.GetCounter(metricCandidate.ID); exist {
 
 				// подписываем метрику если установлен ключ шифрования
-				if "" != h.config.Server.HashKey {
+				if h.config.Server.HashKey != "" {
 					metricCandidate.Hash = h.hasher.Hash(fmt.Sprintf("%s:counter:%d", metricCandidate.ID, metricValue),
 						h.config.Server.HashKey)
 				}

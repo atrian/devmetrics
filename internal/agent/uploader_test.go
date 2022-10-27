@@ -11,7 +11,7 @@ import (
 func TestUploader_buildStatUploadURL(t *testing.T) {
 	type fields struct {
 		client *http.Client
-		config *agentconfig.HTTPConfig
+		config *agentconfig.Config
 	}
 	type args struct {
 		metricType  string
@@ -31,7 +31,7 @@ func TestUploader_buildStatUploadURL(t *testing.T) {
 			name: "Basic func usage",
 			fields: fields{
 				client: nil,
-				config: &config.HTTP,
+				config: config,
 			},
 			args: args{
 				metricType:  "gauge",
