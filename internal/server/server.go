@@ -21,8 +21,10 @@ func NewServer() *Server {
 
 	var appStorage storage.Repository
 	if config.Server.DBDSN == "" {
+		fmt.Println("Loading memory storage")
 		appStorage = storage.NewMemoryStorage(config)
 	} else {
+		fmt.Println("Loading PGSQL storage with DSN:", config.Server.DBDSN)
 		appStorage = storage.NewPgSQLStorage(config)
 	}
 
