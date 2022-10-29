@@ -29,6 +29,9 @@ func registerRoutes(router *Router, handler *handlers.Handler) {
 	// При попытке запроса неизвестной серверу метрики сервер должен возвращать http.StatusNotFound.
 	router.Get("/value/{metricType}/{metricTitle}", handler.GetMetric())
 
+	// Пинг соединения с БД
+	router.Get("/ping", handler.GetPing())
+
 	// Сохранение произвольных метрик,
 	// POST /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
 	router.Post("/update/{metricType}/{metricTitle}/{metricValue}", handler.UpdateMetric())

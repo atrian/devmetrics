@@ -13,6 +13,7 @@ var (
 	address       *string
 	file          *string
 	hashKey       *string
+	dsn           *string
 	restore       *bool
 	storeInterval *time.Duration
 )
@@ -28,6 +29,7 @@ type ServerConfig struct {
 	Restore            bool          `env:"RESTORE"`
 	MetricTemplateFile string
 	HashKey            string `env:"KEY"`
+	DBDSN              string `env:"DATABASE_DSN"`
 }
 
 type HTTPConfig struct {
@@ -84,6 +86,7 @@ func (config *Config) loadServerFlags() {
 	restore = flag.Bool("r", true, "Restore metrics from dump file on server start.")
 	storeInterval = flag.Duration("i", 300*time.Second, "Metrics dump interval in seconds.")
 	hashKey = flag.String("k", "", "Key for metrics sign validation")
+	dsn = flag.String("d", "", "DSN")
 
 	flag.Parse()
 
@@ -92,4 +95,5 @@ func (config *Config) loadServerFlags() {
 	config.Server.Restore = *restore
 	config.Server.StoreInterval = *storeInterval
 	config.Server.HashKey = *hashKey
+	config.Server.DBDSN = *dsn
 }
