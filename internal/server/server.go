@@ -24,7 +24,7 @@ func NewServer() *Server {
 		fmt.Println("Loading memory storage")
 		appStorage = storage.NewMemoryStorage(config)
 	} else {
-		fmt.Println("Loading PGSQL storage with DSN:", config.Server.DBDSN)
+		fmt.Println("Loading PGSQL storage")
 		appStorage = storage.NewPgSQLStorage(config)
 	}
 
