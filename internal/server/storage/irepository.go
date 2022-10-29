@@ -11,5 +11,5 @@ type Repository interface {
 	StoreCounter(name string, value int64)
 	GetCounter(name string) (int64, bool)
 	GetMetrics() *MetricsDicts
-	Dumper
+	Observer
 }

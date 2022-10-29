@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"github.com/atrian/devmetrics/internal/dto"
@@ -23,32 +24,32 @@ func NewMemoryStorage(config *serverconfig.Config) *MemoryStorage {
 	return &storage
 }
 
-func (s MemoryStorage) StoreGauge(name string, value float64) {
+func (s *MemoryStorage) StoreGauge(name string, value float64) {
 	s.metrics.GaugeDict[name] = gauge(value)
 	s.syncWithFileOnUpdate()
 }
 
-func (s MemoryStorage) GetGauge(name string) (float64, bool) {
+func (s *MemoryStorage) GetGauge(name string) (float64, bool) {
 	value, exist := s.metrics.GaugeDict[name]
 	return float64(value), exist
 }
 
-func (s MemoryStorage) StoreCounter(name string, value int64) {
+func (s *MemoryStorage) StoreCounter(name string, value int64) {
 	s.metrics.CounterDict[name] += counter(value)
 	s.syncWithFileOnUpdate()
 }
 
-func (s MemoryStorage) GetCounter(name string) (int64, bool) {
+func (s *MemoryStorage) GetCounter(name string) (int64, bool) {
 	value, exist := s.metrics.CounterDict[name]
 	return int64(value), exist
 }
 
-func (s MemoryStorage) GetMetrics() *MetricsDicts {
+func (s *MemoryStorage) GetMetrics() *MetricsDicts {
 	return s.metrics
 }
 
 // DumpToFile сохраняем данные из памяти в файл в json формате
-func (s MemoryStorage) DumpToFile(filename string) error {
+func (s *MemoryStorage) DumpToFile(filename string) error {
 	fmt.Println("Dump data to file")
 
 	// STORE_FILE - пустое значение — отключает функцию записи на диск
@@ -98,7 +99,7 @@ func (s MemoryStorage) DumpToFile(filename string) error {
 }
 
 // RestoreFromFile Восстановление данных из файла
-func (s MemoryStorage) RestoreFromFile(filename string) error {
+func (s *MemoryStorage) RestoreFromFile(filename string) error {
 	fmt.Println("Restore metrics from file")
 
 	file, err := os.OpenFile(filename, os.O_RDONLY|os.O_CREATE, 0777)
@@ -129,11 +130,57 @@ func (s MemoryStorage) RestoreFromFile(filename string) error {
 }
 
 // syncWithFileOnUpdate сохраняем дамп метрик в файл при обновлении любой метрики если StoreInterval = 0
-func (s MemoryStorage) syncWithFileOnUpdate() {
+func (s *MemoryStorage) syncWithFileOnUpdate() {
 	if s.config.Server.StoreInterval == 0 {
 		err := s.DumpToFile(s.config.Server.StoreFile)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
+}
+
+// RunOnStart метод вызывается при старте хранилища
+func (s *MemoryStorage) RunOnStart() {
+	// RESTORE (по умолчанию true) — булево значение (true/false), определяющее,
+	// загружать или нет начальные значения из указанного файла при старте сервера.
+	if s.config.Server.Restore {
+		err := s.RestoreFromFile(s.config.Server.StoreFile)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	// STORE_INTERVAL (по умолчанию 300) — интервал времени в секундах,
+	// по истечении которого текущие показания сервера сбрасываются на диск
+	// (значение 0 — делает запись синхронной).
+	if s.config.Server.StoreInterval != 0 {
+		s.runMetricsDumpTicker()
+	}
+}
+
+// RunOnClose метод вызывается при штатном завершении
+func (s *MemoryStorage) RunOnClose() {
+	fmt.Println("Dump metrics to file before shutdown")
+	err := s.DumpToFile(s.config.Server.StoreFile)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+// runMetricsDumpTicker дамп хранилища из памяти в файл с запуском по тикеру
+func (s *MemoryStorage) runMetricsDumpTicker() {
+	// запускаем тикер дампа статистики
+	dumpMetricsTicker := time.NewTicker(s.config.Server.StoreInterval)
+
+	fmt.Println("Run metrics dump every:", s.config.Server.StoreInterval)
+
+	go func() {
+		for dumpTime := range dumpMetricsTicker.C {
+			err := s.DumpToFile(s.config.Server.StoreFile)
+			if err != nil {
+				fmt.Println(err)
+			}
+			fmt.Println("Metrics dump time:", dumpTime)
+		}
+	}()
 }

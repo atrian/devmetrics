@@ -86,7 +86,7 @@ func (config *Config) loadServerFlags() {
 	restore = flag.Bool("r", true, "Restore metrics from dump file on server start.")
 	storeInterval = flag.Duration("i", 300*time.Second, "Metrics dump interval in seconds.")
 	hashKey = flag.String("k", "", "Key for metrics sign validation")
-	dsn = flag.String("d", "", "DSN")
+	dsn = flag.String("d", "", "DSN for PostgreSQL server")
 
 	flag.Parse()
 

@@ -2,14 +2,14 @@ package handlers
 
 import (
 	"context"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"net/http"
+	"time"
+
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 func (h *Handler) GetPing() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.Background()
-
 		// соединение с БД
 		dbPool, poolErr := pgxpool.Connect(context.Background(), h.config.Server.DBDSN)
 
@@ -20,7 +20,10 @@ func (h *Handler) GetPing() http.HandlerFunc {
 
 		if dbPool != nil {
 			defer dbPool.Close()
-			pingErr := dbPool.Ping(ctx)
+
+			ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+			defer cancel()
+			pingErr := dbPool.Ping(ctx) // наследуем контекcт запроса r *http.Request, добавляем таймаут
 			if pingErr != nil {
 				http.Error(w, "Unable to ping database:"+pingErr.Error(), http.StatusInternalServerError)
 				return
