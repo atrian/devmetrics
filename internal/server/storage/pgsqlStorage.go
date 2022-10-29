@@ -93,7 +93,7 @@ func (s *PgSQLStorage) GetCounter(name string) (int64, bool) {
 
 func (s *PgSQLStorage) GetMetrics() *MetricsDicts {
 	var (
-		metricId   string
+		metricID   string
 		metricType string
 		delta      sql.NullFloat64
 		value      sql.NullInt64
@@ -101,15 +101,15 @@ func (s *PgSQLStorage) GetMetrics() *MetricsDicts {
 
 	sqlStatement := `SELECT id, type, delta, value FROM public.metrics;`
 	rows, err := s.pgPool.Query(context.Background(), sqlStatement)
-	defer rows.Close()
 
 	if err != nil {
 		fmt.Println(err)
 		return s.metrics
 	}
+	defer rows.Close()
 
 	for rows.Next() {
-		err = rows.Scan(&metricId, &metricType, &delta, &value)
+		err = rows.Scan(&metricID, &metricType, &delta, &value)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -117,9 +117,9 @@ func (s *PgSQLStorage) GetMetrics() *MetricsDicts {
 
 		switch metricType {
 		case "gauge":
-			s.metrics.GaugeDict[metricId] = gauge(delta.Float64)
+			s.metrics.GaugeDict[metricID] = gauge(delta.Float64)
 		case "counter":
-			s.metrics.CounterDict[metricId] = counter(value.Int64)
+			s.metrics.CounterDict[metricID] = counter(value.Int64)
 		default:
 			continue
 		}
