@@ -135,18 +135,29 @@ func (s *PgSQLStorage) GetMetrics() *MetricsDicts {
 
 // SetMetrics сохранение слайса DTO Metrics в бд.
 func (s *PgSQLStorage) SetMetrics(metrics []dto.Metrics) {
+	memoryCounters := make(map[string]int64)
 	ctx := context.Background()
 
 	// начинаем транзакцию
 	tx, err := s.pgPool.Begin(ctx)
+	if err != nil {
+		fmt.Println("Transaction start error: ", err.Error())
+	}
 
 	batch := &pgx.Batch{}
 	for _, metric := range metrics {
 		switch metric.MType {
 		case "counter":
+			// сохраненное значение в БД
 			storedCounter, _ := s.GetCounter(metric.ID)
-			batch.Queue(upsertMetricQuery(), metric.ID, metric.MType, *metric.Delta+storedCounter, nil)
+			// сохраненные значения в памяти в рамках одного batch запроса
+			memoryCounter, _ := memoryCounters[metric.ID]
+			fmt.Println("counterSetValue", storedCounter, *metric.Delta, "=", storedCounter+memoryCounter+*metric.Delta)
+			batch.Queue(upsertMetricQuery(), metric.ID, metric.MType, *metric.Delta+storedCounter+memoryCounter, nil)
+			// обновляем сумму в памяти
+			memoryCounters[metric.ID] += *metric.Delta
 		case "gauge":
+			// записываем последнее если пришла пачка одинаковых
 			batch.Queue(upsertMetricQuery(), metric.ID, metric.MType, nil, *metric.Value)
 		default:
 			continue
