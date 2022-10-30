@@ -42,10 +42,25 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 		// сохраняем метрики с правильными подписями в БД
 		h.storage.SetMetrics(verifiedMetrics)
 
+		// собираем актуальные значения
+		for _, metric := range verifiedMetrics {
+			switch metric.MType {
+			case "counter":
+				counterActualValue, _ := h.storage.GetCounter(metric.ID)
+				metric.Delta = &counterActualValue
+			case "gauge":
+				gaugeActualValue, _ := h.storage.GetGauge(metric.ID)
+				metric.Value = &gaugeActualValue
+			default:
+				continue
+			}
+		}
+
 		w.Header().Set("content-type", h.config.HTTP.ContentType)
 		// устанавливаем статус-код 200
 		w.WriteHeader(http.StatusOK)
 		fmt.Println("Request OK")
+		json.NewEncoder(w).Encode(verifiedMetrics)
 	}
 }
 
