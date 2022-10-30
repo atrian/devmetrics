@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -37,9 +38,8 @@ func upsertMetricStatement() string {
 	return `
 		INSERT INTO public.metrics (id, type, delta, value)
 		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (id) DO UPDATE
-		SET type = $2, delta = $3, value = $4;
-		`
+		ON CONFLICT (id, type) DO UPDATE
+		SET type = $2, delta = $3, value = $4;`
 }
 
 func (s *PgSQLStorage) StoreGauge(name string, value float64) {
@@ -133,6 +133,7 @@ func (s *PgSQLStorage) GetMetrics() *MetricsDicts {
 // RunOnStart на старте запускаем миграции
 func (s *PgSQLStorage) RunOnStart() {
 	runMigrations(s.config.Server.DBDSN)
+	poolStatLogger(s.pgPool)
 }
 
 // RunOnClose закрываем pgPool
@@ -157,4 +158,25 @@ func runMigrations(dsn string) {
 	} else {
 		fmt.Println("Successfully migrated")
 	}
+}
+
+func poolStatLogger(pgPool *pgxpool.Pool) {
+	statInterval := 30 * time.Second
+
+	// запускаем тикер дампа статистики пула соединений с БД
+	dumpPGPoolStatTicker := time.NewTicker(statInterval)
+
+	fmt.Println("Print pgPool stat every:", statInterval)
+
+	go func() {
+		for statTime := range dumpPGPoolStatTicker.C {
+			stat := pgPool.Stat()
+			fmt.Println(statTime.Format(time.RFC822Z), " - PGPool stat")
+			fmt.Println("TotalConns: ", stat.TotalConns())
+			fmt.Println("AcquiredConns: ", stat.AcquiredConns())
+			fmt.Println("IdleConns: ", stat.IdleConns())
+			fmt.Println("NewConnsCount: ", stat.NewConnsCount())
+			fmt.Println("MaxConns: ", stat.MaxConns())
+		}
+	}()
 }
