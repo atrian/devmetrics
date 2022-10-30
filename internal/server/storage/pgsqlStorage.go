@@ -4,17 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/atrian/devmetrics/internal/dto"
-	"github.com/jackc/pgx/v4"
 	"log"
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
+	"github.com/atrian/devmetrics/internal/dto"
 )
 
 type PgSQLStorage struct {
@@ -148,9 +148,9 @@ func (s *PgSQLStorage) SetMetrics(metrics []dto.Metrics) {
 	for _, metric := range metrics {
 		switch metric.MType {
 		case "counter":
-			// сохраненное значение в БД
+			// получаем сохраненное ранее в БД значение
 			storedCounter, _ := s.GetCounter(metric.ID)
-			// сохраненные значения в памяти в рамках одного batch запроса
+			// получаем сохраненное ранее значение в памяти в рамках одного batch запроса
 			memoryCounter := memoryCounters[metric.ID]
 			fmt.Println("counterSetValue", storedCounter, *metric.Delta, "=", storedCounter+memoryCounter+*metric.Delta)
 			batch.Queue(upsertMetricQuery(), metric.ID, metric.MType, *metric.Delta+storedCounter+memoryCounter, nil)
@@ -177,7 +177,7 @@ func (s *PgSQLStorage) SetMetrics(metrics []dto.Metrics) {
 	}
 }
 
-// RunOnStart на старте запускаем миграции
+// RunOnStart на старте запускаем миграции, запускаем тикер статистики пула соединений с бд
 func (s *PgSQLStorage) RunOnStart() {
 	runMigrations(s.config.Server.DBDSN)
 	poolStatLogger(s.pgPool)

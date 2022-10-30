@@ -94,6 +94,7 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		fmt.Println("Request OK")
 
+		// формируем структуру JSON ответа
 		response := struct {
 			Status  string
 			Updated []dto.Metrics
@@ -111,7 +112,6 @@ func unmarshallMetrics(r *http.Request) []dto.Metrics {
 
 	// если в заголовках установлен Content-Encoding gzip, распаковываем тело
 	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-		fmt.Println("here")
 		body = decodeGzipBody(r.Body)
 	} else {
 		body = r.Body
