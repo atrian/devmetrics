@@ -14,6 +14,10 @@ import (
 // UpdateJSONMetrics обновление метрик POST /updates в JSON
 func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// список уникальных метрик в запросе
+		countersRequested := make(map[string]int)
+		gaugesRequested := make(map[string]int)
+
 		metrics := unmarshallMetrics(r)
 		verifiedMetrics := make([]dto.Metrics, 0, len(metrics))
 
@@ -26,12 +30,14 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 					h.config.Server.HashKey) {
 					continue
 				}
+				gaugesRequested[metric.ID] += 1
 			case "counter":
 				if h.config.Server.HashKey != "" && !h.hasher.Compare(metric.Hash,
 					fmt.Sprintf("%s:counter:%d", metric.ID, *metric.Delta),
 					h.config.Server.HashKey) {
 					continue
 				}
+				countersRequested[metric.ID] += 1
 			default:
 				// непонятные метрики просто пропускаем
 				continue
@@ -42,25 +48,52 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 		// сохраняем метрики с правильными подписями в БД
 		h.storage.SetMetrics(verifiedMetrics)
 
-		// собираем актуальные значения
-		for _, metric := range verifiedMetrics {
-			switch metric.MType {
-			case "counter":
-				counterActualValue, _ := h.storage.GetCounter(metric.ID)
-				metric.Delta = &counterActualValue
-			case "gauge":
-				gaugeActualValue, _ := h.storage.GetGauge(metric.ID)
-				metric.Value = &gaugeActualValue
-			default:
-				continue
+		// слайс уникальных метрик для ответа с актуальными значениями
+		responseMetrics := make([]dto.Metrics, 0, len(countersRequested)+len(gaugesRequested))
+
+		// собираем актуальные значения counters
+		for key, _ := range countersRequested {
+			actualCounterValue, _ := h.storage.GetCounter(key)
+
+			metric := dto.Metrics{
+				ID:    key,
+				MType: "counter",
+				Delta: &actualCounterValue,
 			}
+
+			// подписываем метрику если установлен ключ шифрования
+			if h.config.Server.HashKey != "" {
+				metric.Hash = h.hasher.Hash(fmt.Sprintf("%s:counter:%d", metric.ID, actualCounterValue),
+					h.config.Server.HashKey)
+			}
+
+			responseMetrics = append(responseMetrics, metric)
+		}
+
+		// собираем актуальные значения gauges
+		for key, _ := range gaugesRequested {
+			actualGaugeValue, _ := h.storage.GetGauge(key)
+
+			metric := dto.Metrics{
+				ID:    key,
+				MType: "gauge",
+				Value: &actualGaugeValue,
+			}
+
+			// подписываем метрику если установлен ключ шифрования
+			if h.config.Server.HashKey != "" {
+				metric.Hash = h.hasher.Hash(fmt.Sprintf("%s:gauge:%f", metric.ID, actualGaugeValue),
+					h.config.Server.HashKey)
+			}
+
+			responseMetrics = append(responseMetrics, metric)
 		}
 
 		w.Header().Set("content-type", h.config.HTTP.ContentType)
 		// устанавливаем статус-код 200
 		w.WriteHeader(http.StatusOK)
 		fmt.Println("Request OK")
-		json.NewEncoder(w).Encode(verifiedMetrics)
+		json.NewEncoder(w).Encode(responseMetrics)
 	}
 }
 
