@@ -52,7 +52,7 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 		responseMetrics := make([]dto.Metrics, 0, len(countersRequested)+len(gaugesRequested))
 
 		// собираем актуальные значения counters
-		for key, _ := range countersRequested {
+		for key := range countersRequested {
 			actualCounterValue, _ := h.storage.GetCounter(key)
 
 			metric := dto.Metrics{
@@ -71,7 +71,7 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 		}
 
 		// собираем актуальные значения gauges
-		for key, _ := range gaugesRequested {
+		for key := range gaugesRequested {
 			actualGaugeValue, _ := h.storage.GetGauge(key)
 
 			metric := dto.Metrics{
@@ -93,7 +93,8 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 		// устанавливаем статус-код 200
 		w.WriteHeader(http.StatusOK)
 		fmt.Println("Request OK")
-		json.NewEncoder(w).Encode(responseMetrics)
+		//json.NewEncoder(w).Encode(responseMetrics)
+		json.NewEncoder(w).Encode("")
 	}
 }
 
