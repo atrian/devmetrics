@@ -64,7 +64,8 @@ func unmarshallMetrics(r *http.Request) []dto.Metrics {
 	decoder := json.NewDecoder(body)
 	err := decoder.Decode(&metrics)
 	if err != nil {
-		panic(err)
+		fmt.Println("JSON decode error:", err)
+		fmt.Println("Metrics:", metrics)
 	}
 
 	return metrics

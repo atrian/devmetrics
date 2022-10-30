@@ -151,7 +151,7 @@ func (s *PgSQLStorage) SetMetrics(metrics []dto.Metrics) {
 			// сохраненное значение в БД
 			storedCounter, _ := s.GetCounter(metric.ID)
 			// сохраненные значения в памяти в рамках одного batch запроса
-			memoryCounter, _ := memoryCounters[metric.ID]
+			memoryCounter := memoryCounters[metric.ID]
 			fmt.Println("counterSetValue", storedCounter, *metric.Delta, "=", storedCounter+memoryCounter+*metric.Delta)
 			batch.Queue(upsertMetricQuery(), metric.ID, metric.MType, *metric.Delta+storedCounter+memoryCounter, nil)
 			// обновляем сумму в памяти
