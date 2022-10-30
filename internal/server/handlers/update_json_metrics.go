@@ -94,7 +94,12 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		fmt.Println("Request OK")
 		//json.NewEncoder(w).Encode(responseMetrics)
-		json.NewEncoder(w).Encode("")
+		testMetricVal := 0.6
+		json.NewEncoder(w).Encode(dto.Metrics{
+			ID:    "test",
+			MType: "gauge",
+			Value: &testMetricVal,
+		})
 	}
 }
 
