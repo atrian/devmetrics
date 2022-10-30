@@ -93,13 +93,16 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 		// устанавливаем статус-код 200
 		w.WriteHeader(http.StatusOK)
 		fmt.Println("Request OK")
-		//json.NewEncoder(w).Encode(responseMetrics)
-		testMetricVal := 0.6
-		json.NewEncoder(w).Encode(dto.Metrics{
-			ID:    "test",
-			MType: "gauge",
-			Value: &testMetricVal,
-		})
+
+		response := struct {
+			Status  string
+			Updated []dto.Metrics
+		}{
+			Status:  "OK",
+			Updated: responseMetrics,
+		}
+
+		json.NewEncoder(w).Encode(response)
 	}
 }
 
