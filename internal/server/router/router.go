@@ -36,9 +36,14 @@ func registerRoutes(router *Router, handler *handlers.Handler) {
 	// POST /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
 	router.Post("/update/{metricType}/{metricTitle}/{metricValue}", handler.UpdateMetric())
 
+	// Получение 1 метрики в JSON
 	router.Post("/value/", handler.GetJSONMetric())
-	// Пробуем анмаршалинг
+
+	// Обновление 1 метрики в JSON
 	router.Post("/update/", handler.UpdateJSONMetric())
+
+	// Обновление пакета метрик из JSON
+	router.Post("/updates/", handler.UpdateJSONMetrics())
 }
 
 func New(handler *handlers.Handler) *Router {

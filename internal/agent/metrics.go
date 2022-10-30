@@ -143,7 +143,8 @@ func (md *MetricsDics) updateMetrics() {
 	}
 }
 
-func (md *MetricsDics) exportMetrics() *[]dto.Metrics {
+// exportMetrics возвращает слайс DTO с подписанными метриками
+func (md *MetricsDics) exportMetrics(sign func(metricType, id string, delta *int64, value *float64) string) *[]dto.Metrics {
 	exportedData := make([]dto.Metrics, 0, len(md.GaugeDict)+len(md.CounterDict))
 
 	for key, metric := range md.GaugeDict {
@@ -153,6 +154,7 @@ func (md *MetricsDics) exportMetrics() *[]dto.Metrics {
 			MType: "gauge",
 			Delta: nil,
 			Value: &gaugeValue,
+			Hash:  sign("gauge", key, nil, &gaugeValue),
 		})
 	}
 
@@ -163,6 +165,7 @@ func (md *MetricsDics) exportMetrics() *[]dto.Metrics {
 			MType: "counter",
 			Delta: &counterValue,
 			Value: nil,
+			Hash:  sign("counter", key, &counterValue, nil),
 		})
 	}
 

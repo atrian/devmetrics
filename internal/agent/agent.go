@@ -56,6 +56,6 @@ func (a *Agent) RefreshStats() {
 
 func (a *Agent) UploadStats() {
 	uploader := NewUploader(a.config)
-	uploader.SendStat(a.metrics)
+	uploader.SendAllStats(a.metrics)
 	fmt.Println("Upload stats")
 }

@@ -12,8 +12,9 @@ import (
 )
 
 type MemoryStorage struct {
-	metrics *MetricsDicts
-	config  *serverconfig.Config
+	metrics     *MetricsDicts
+	config      *serverconfig.Config
+	silentStore bool
 }
 
 func NewMemoryStorage(config *serverconfig.Config) *MemoryStorage {
@@ -26,7 +27,9 @@ func NewMemoryStorage(config *serverconfig.Config) *MemoryStorage {
 
 func (s *MemoryStorage) StoreGauge(name string, value float64) {
 	s.metrics.GaugeDict[name] = gauge(value)
-	s.syncWithFileOnUpdate()
+	if !s.silentStore {
+		s.syncWithFileOnUpdate()
+	}
 }
 
 func (s *MemoryStorage) GetGauge(name string) (float64, bool) {
@@ -36,7 +39,9 @@ func (s *MemoryStorage) GetGauge(name string) (float64, bool) {
 
 func (s *MemoryStorage) StoreCounter(name string, value int64) {
 	s.metrics.CounterDict[name] += counter(value)
-	s.syncWithFileOnUpdate()
+	if !s.silentStore {
+		s.syncWithFileOnUpdate()
+	}
 }
 
 func (s *MemoryStorage) GetCounter(name string) (int64, bool) {
@@ -115,6 +120,13 @@ func (s *MemoryStorage) RestoreFromFile(filename string) error {
 		fmt.Println("Can't Decode metrics:", err)
 	}
 
+	s.SetMetrics(metrics)
+
+	return nil
+}
+
+func (s *MemoryStorage) SetMetrics(metrics []dto.Metrics) {
+	s.silentStore = true
 	for key, metricCandidate := range metrics {
 		_ = key
 		switch metricCandidate.MType {
@@ -125,8 +137,7 @@ func (s *MemoryStorage) RestoreFromFile(filename string) error {
 		default:
 		}
 	}
-
-	return nil
+	s.silentStore = false
 }
 
 // syncWithFileOnUpdate сохраняем дамп метрик в файл при обновлении любой метрики если StoreInterval = 0

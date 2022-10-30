@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/atrian/devmetrics/internal/dto"
+	"github.com/jackc/pgx/v4"
 	"log"
 	"time"
 
@@ -34,7 +36,8 @@ func NewPgSQLStorage(config *serverconfig.Config) *PgSQLStorage {
 	}
 }
 
-func upsertMetricStatement() string {
+// upsertMetricQuery порядок аргументов в запросе: id, type, delta, value
+func upsertMetricQuery() string {
 	return `
 		INSERT INTO public.metrics (id, type, delta, value)
 		VALUES ($1, $2, $3, $4)
@@ -43,7 +46,7 @@ func upsertMetricStatement() string {
 }
 
 func (s *PgSQLStorage) StoreGauge(name string, value float64) {
-	_, err := s.pgPool.Exec(context.Background(), upsertMetricStatement(), name, "gauge", nil, value)
+	_, err := s.pgPool.Exec(context.Background(), upsertMetricQuery(), name, "gauge", nil, value)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -57,7 +60,7 @@ func (s *PgSQLStorage) StoreCounter(name string, value int64) {
 	}
 
 	// Порядок аргументов id, type, delta, value
-	_, err := s.pgPool.Exec(context.Background(), upsertMetricStatement(), name, "counter", value, nil)
+	_, err := s.pgPool.Exec(context.Background(), upsertMetricQuery(), name, "counter", value, nil)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -66,8 +69,8 @@ func (s *PgSQLStorage) StoreCounter(name string, value int64) {
 func (s *PgSQLStorage) GetGauge(name string) (float64, bool) {
 	var value float64
 
-	sqlStatement := `SELECT value FROM public.metrics WHERE id=$1;`
-	row := s.pgPool.QueryRow(context.Background(), sqlStatement, name)
+	sqlQuery := `SELECT value FROM public.metrics WHERE id=$1;`
+	row := s.pgPool.QueryRow(context.Background(), sqlQuery, name)
 
 	switch err := row.Scan(&value); err {
 	case nil:
@@ -81,8 +84,8 @@ func (s *PgSQLStorage) GetGauge(name string) (float64, bool) {
 func (s *PgSQLStorage) GetCounter(name string) (int64, bool) {
 	var delta int64
 
-	sqlStatement := `SELECT delta FROM public.metrics WHERE id=$1;`
-	row := s.pgPool.QueryRow(context.Background(), sqlStatement, name)
+	sqlQuery := `SELECT delta FROM public.metrics WHERE id=$1;`
+	row := s.pgPool.QueryRow(context.Background(), sqlQuery, name)
 
 	switch err := row.Scan(&delta); err {
 	case nil:
@@ -128,6 +131,39 @@ func (s *PgSQLStorage) GetMetrics() *MetricsDicts {
 	}
 
 	return s.metrics
+}
+
+// SetMetrics сохранение слайса DTO Metrics в бд.
+func (s *PgSQLStorage) SetMetrics(metrics []dto.Metrics) {
+	ctx := context.Background()
+
+	// начинаем транзакцию
+	tx, err := s.pgPool.Begin(ctx)
+
+	batch := &pgx.Batch{}
+	for _, metric := range metrics {
+		switch metric.MType {
+		case "counter":
+			storedCounter, _ := s.GetCounter(metric.ID)
+			batch.Queue(upsertMetricQuery(), metric.ID, metric.MType, *metric.Delta+storedCounter, nil)
+		case "gauge":
+			batch.Queue(upsertMetricQuery(), metric.ID, metric.MType, nil, *metric.Value)
+		default:
+			continue
+		}
+	}
+
+	result := tx.SendBatch(ctx, batch)
+	var queryError error
+	for queryError == nil {
+		_, queryError = result.Exec()
+	}
+
+	// коммит транзакции
+	err = tx.Commit(ctx)
+	if err != nil {
+		fmt.Println("Transaction error: ", err.Error())
+	}
 }
 
 // RunOnStart на старте запускаем миграции
