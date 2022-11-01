@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -22,6 +23,9 @@ type PgSQLStorage struct {
 	config  *serverconfig.Config
 	logger  *zap.Logger
 }
+
+// Проверка имплементации интерфейса. Как это работает?
+var _ Repository = (*PgSQLStorage)(nil)
 
 func NewPgSQLStorage(config *serverconfig.Config, logger *zap.Logger) (*PgSQLStorage, error) {
 	dbPool, poolErr := pgxpool.Connect(context.Background(), config.Server.DBDSN)
@@ -47,15 +51,16 @@ func upsertMetricQuery() string {
 		SET type = $2, delta = $3, value = $4;`
 }
 
-func (s *PgSQLStorage) StoreGauge(name string, value float64) {
+func (s *PgSQLStorage) StoreGauge(name string, value float64) error {
 	_, err := s.pgPool.Exec(context.Background(), upsertMetricQuery(), name, "gauge", nil, value)
 	if err != nil {
 		s.logger.Error("StoreGauge pgPool.Exec", zap.Error(err))
-		// TODO возвращение ошибок в интерфейс
+		return fmt.Errorf(`failed store gauge: %w`, err)
 	}
+	return nil
 }
 
-func (s *PgSQLStorage) StoreCounter(name string, value int64) {
+func (s *PgSQLStorage) StoreCounter(name string, value int64) error {
 	// Проверяем есть ли уже счетчик в базе, если есть, суммируем данные
 	storedCounter, exist := s.GetCounter(name)
 	if exist {
@@ -66,7 +71,10 @@ func (s *PgSQLStorage) StoreCounter(name string, value int64) {
 	_, err := s.pgPool.Exec(context.Background(), upsertMetricQuery(), name, "counter", value, nil)
 	if err != nil {
 		s.logger.Error("StoreCounter pgPool.Exec", zap.Error(err))
+		return fmt.Errorf(`failed store counter: %w`, err)
 	}
+
+	return nil
 }
 
 func (s *PgSQLStorage) GetGauge(name string) (float64, bool) {
@@ -79,7 +87,7 @@ func (s *PgSQLStorage) GetGauge(name string) (float64, bool) {
 	case nil:
 		return value, true
 	default:
-		s.logger.Error("GetGauge row.Scan", zap.Error(err))
+		s.logger.Debug("GetGauge row.Scan", zap.Error(err))
 		return value, false
 	}
 }
@@ -94,7 +102,7 @@ func (s *PgSQLStorage) GetCounter(name string) (int64, bool) {
 	case nil:
 		return delta, true
 	default:
-		s.logger.Error("GetCounter row.Scan", zap.Error(err))
+		s.logger.Debug("GetCounter row.Scan", zap.Error(err))
 		return delta, false
 	}
 }

@@ -37,6 +37,9 @@ func NewServer() *Server {
 	} else {
 		logger.Info("Loading PGSQL storage")
 		appStorage, err = storage.NewPgSQLStorage(config, logger)
+		if err != nil {
+			logger.Error("Loading PGSQL storage", zap.Error(err))
+		}
 	}
 
 	server := Server{

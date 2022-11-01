@@ -8,9 +8,9 @@ type (
 )
 
 type Repository interface {
-	StoreGauge(name string, value float64)
+	StoreGauge(name string, value float64) error
 	GetGauge(name string) (float64, bool)
-	StoreCounter(name string, value int64)
+	StoreCounter(name string, value int64) error
 	GetCounter(name string) (int64, bool)
 	GetMetrics() *MetricsDicts
 	SetMetrics(metrics []dto.Metrics)

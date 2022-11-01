@@ -17,6 +17,9 @@ type MemoryStorage struct {
 	silentStore bool
 }
 
+// Проверка имплементации интерфейса. Как это работает?
+var _ Repository = (*MemoryStorage)(nil)
+
 func NewMemoryStorage(config *serverconfig.Config, logger *zap.Logger) *MemoryStorage {
 	storage := MemoryStorage{
 		metrics: NewMetricsDicts(),
@@ -26,11 +29,16 @@ func NewMemoryStorage(config *serverconfig.Config, logger *zap.Logger) *MemorySt
 	return &storage
 }
 
-func (s *MemoryStorage) StoreGauge(name string, value float64) {
+func (s *MemoryStorage) StoreGauge(name string, value float64) error {
 	s.metrics.GaugeDict[name] = gauge(value)
 	if !s.silentStore {
-		s.syncWithFileOnUpdate()
+		err := s.syncWithFileOnUpdate()
+		if err != nil {
+			s.logger.Error("StoreGauge syncWithFileOnUpdate", zap.Error(err))
+			return err
+		}
 	}
+	return nil
 }
 
 func (s *MemoryStorage) GetGauge(name string) (float64, bool) {
@@ -38,11 +46,16 @@ func (s *MemoryStorage) GetGauge(name string) (float64, bool) {
 	return float64(value), exist
 }
 
-func (s *MemoryStorage) StoreCounter(name string, value int64) {
+func (s *MemoryStorage) StoreCounter(name string, value int64) error {
 	s.metrics.CounterDict[name] += counter(value)
 	if !s.silentStore {
-		s.syncWithFileOnUpdate()
+		err := s.syncWithFileOnUpdate()
+		if err != nil {
+			s.logger.Error("StoreCounter syncWithFileOnUpdate", zap.Error(err))
+			return err
+		}
 	}
+	return nil
 }
 
 func (s *MemoryStorage) GetCounter(name string) (int64, bool) {
@@ -144,13 +157,15 @@ func (s *MemoryStorage) SetMetrics(metrics []dto.Metrics) {
 }
 
 // syncWithFileOnUpdate сохраняем дамп метрик в файл при обновлении любой метрики если StoreInterval = 0
-func (s *MemoryStorage) syncWithFileOnUpdate() {
+func (s *MemoryStorage) syncWithFileOnUpdate() error {
 	if s.config.Server.StoreInterval == 0 {
 		err := s.DumpToFile(s.config.Server.StoreFile)
 		if err != nil {
 			s.logger.Error("syncWithFileOnUpdate", zap.Error(err))
+			return err
 		}
 	}
+	return nil
 }
 
 // RunOnStart метод вызывается при старте хранилища

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -32,7 +33,11 @@ func (h *Handler) UpdateMetric() http.HandlerFunc {
 				badRequestFlag = true
 			}
 
-			h.storage.StoreGauge(metricTitle, floatValue)
+			err = h.storage.StoreGauge(metricTitle, floatValue)
+			if err != nil {
+				h.logger.Error("Cant store gauge metric", zap.Error(errors.Unwrap(err)))
+				http.Error(w, "Something went wrong", http.StatusInternalServerError)
+			}
 			actualMetricValue = metricValue
 
 			h.logger.Debug("Gauge metric stored",
@@ -46,7 +51,11 @@ func (h *Handler) UpdateMetric() http.HandlerFunc {
 				badRequestFlag = true
 			}
 
-			h.storage.StoreCounter(metricTitle, int64(intValue))
+			err = h.storage.StoreCounter(metricTitle, int64(intValue))
+			if err != nil {
+				h.logger.Error("Cant store counter metric", zap.Error(errors.Unwrap(err)))
+				http.Error(w, "Something went wrong", http.StatusInternalServerError)
+			}
 
 			counterVal, _ := h.storage.GetCounter(metricTitle)
 			actualMetricValue = strconv.Itoa(int(counterVal))
@@ -57,7 +66,7 @@ func (h *Handler) UpdateMetric() http.HandlerFunc {
 		}
 
 		if badRequestFlag {
-			h.logger.Info("Cant store metric")
+			h.logger.Info("Cant store metric, cant convert string value to storage value")
 			http.Error(w, "Cant store metric", http.StatusBadRequest)
 		} else {
 			h.logger.Debug("Request OK")
