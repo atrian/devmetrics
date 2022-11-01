@@ -4,13 +4,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"go.uber.org/zap"
 )
 
 // GetJSONMetric получение метрик GET /value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>
 func (h *Handler) GetJSONMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", h.config.HTTP.ContentType)
-		metricCandidate := unmarshallMetric(r.Body)
+		metricCandidate, err := h.unmarshallMetric(r.Body)
+
+		if err != nil {
+			h.logger.Error("GetJSONMetric cant unmarshallMetric", zap.Error(err))
+			http.Error(w, "Bad JSON", http.StatusBadRequest)
+		}
 
 		switch metricCandidate.MType {
 		case "gauge":

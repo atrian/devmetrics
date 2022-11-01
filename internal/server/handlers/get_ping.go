@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v4/pgxpool"
+	"go.uber.org/zap"
 )
 
 func (h *Handler) GetPing() http.HandlerFunc {
@@ -14,7 +15,8 @@ func (h *Handler) GetPing() http.HandlerFunc {
 		dbPool, poolErr := pgxpool.Connect(context.Background(), h.config.Server.DBDSN)
 
 		if poolErr != nil {
-			http.Error(w, "Unable to connect to database:"+poolErr.Error(), http.StatusInternalServerError)
+			h.logger.Error("GetPing handler - Unable to connect to database", zap.Error(poolErr))
+			http.Error(w, "Unable to connect to database: "+poolErr.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -25,6 +27,7 @@ func (h *Handler) GetPing() http.HandlerFunc {
 			defer cancel()
 			pingErr := dbPool.Ping(ctx) // наследуем контекcт запроса r *http.Request, добавляем таймаут
 			if pingErr != nil {
+				h.logger.Error("GetPing handler - Unable to ping database", zap.Error(pingErr))
 				http.Error(w, "Unable to ping database:"+pingErr.Error(), http.StatusInternalServerError)
 				return
 			}

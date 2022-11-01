@@ -2,25 +2,26 @@ package storage
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
 	"os"
 	"time"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"github.com/atrian/devmetrics/internal/dto"
+	"go.uber.org/zap"
 )
 
 type MemoryStorage struct {
 	metrics     *MetricsDicts
 	config      *serverconfig.Config
+	logger      *zap.Logger
 	silentStore bool
 }
 
-func NewMemoryStorage(config *serverconfig.Config) *MemoryStorage {
+func NewMemoryStorage(config *serverconfig.Config, logger *zap.Logger) *MemoryStorage {
 	storage := MemoryStorage{
 		metrics: NewMetricsDicts(),
 		config:  config,
+		logger:  logger,
 	}
 	return &storage
 }
@@ -55,16 +56,17 @@ func (s *MemoryStorage) GetMetrics() *MetricsDicts {
 
 // DumpToFile сохраняем данные из памяти в файл в json формате
 func (s *MemoryStorage) DumpToFile(filename string) error {
-	fmt.Println("Dump data to file")
+	s.logger.Debug("Dump data to file")
 
 	// STORE_FILE - пустое значение — отключает функцию записи на диск
 	if filename == "" {
+		s.logger.Debug("Filename is empty, abort dumping")
 		return nil
 	}
 
 	metricWriter, err := NewMetricWriter(filename)
 	if err != nil {
-		log.Fatal(err)
+		s.logger.Error("NewMetricWriter error", zap.Error(err))
 	}
 
 	defer metricWriter.Close()
@@ -97,6 +99,7 @@ func (s *MemoryStorage) DumpToFile(filename string) error {
 
 	// пишем все метрики в JSON
 	if err := metricWriter.WriteMetric(&metricsDTO); err != nil {
+		s.logger.Error("WriteMetric error", zap.Error(err))
 		return err
 	}
 
@@ -105,11 +108,11 @@ func (s *MemoryStorage) DumpToFile(filename string) error {
 
 // RestoreFromFile Восстановление данных из файла
 func (s *MemoryStorage) RestoreFromFile(filename string) error {
-	fmt.Println("Restore metrics from file")
+	s.logger.Info("Restore metrics from file")
 
 	file, err := os.OpenFile(filename, os.O_RDONLY|os.O_CREATE, 0777)
 	if err != nil {
-		fmt.Println("Can't load file:", err)
+		s.logger.Warn("RestoreFromFile can't load file", zap.Error(err))
 	}
 
 	var metrics []dto.Metrics
@@ -117,7 +120,7 @@ func (s *MemoryStorage) RestoreFromFile(filename string) error {
 
 	err = decoder.Decode(&metrics)
 	if err != nil {
-		fmt.Println("Can't Decode metrics:", err)
+		s.logger.Warn("Can't Decode metrics", zap.Error(err))
 	}
 
 	s.SetMetrics(metrics)
@@ -145,7 +148,7 @@ func (s *MemoryStorage) syncWithFileOnUpdate() {
 	if s.config.Server.StoreInterval == 0 {
 		err := s.DumpToFile(s.config.Server.StoreFile)
 		if err != nil {
-			log.Fatal(err)
+			s.logger.Error("syncWithFileOnUpdate", zap.Error(err))
 		}
 	}
 }
@@ -157,7 +160,7 @@ func (s *MemoryStorage) RunOnStart() {
 	if s.config.Server.Restore {
 		err := s.RestoreFromFile(s.config.Server.StoreFile)
 		if err != nil {
-			fmt.Println(err)
+			s.logger.Error("RunOnStart - RestoreFromFile call", zap.Error(err))
 		}
 	}
 
@@ -171,10 +174,10 @@ func (s *MemoryStorage) RunOnStart() {
 
 // RunOnClose метод вызывается при штатном завершении
 func (s *MemoryStorage) RunOnClose() {
-	fmt.Println("Dump metrics to file before shutdown")
+	s.logger.Info("Dump metrics to file before shutdown")
 	err := s.DumpToFile(s.config.Server.StoreFile)
 	if err != nil {
-		fmt.Println(err)
+		s.logger.Error("RunOnClose DumpToFile", zap.Error(err))
 	}
 }
 
@@ -183,15 +186,16 @@ func (s *MemoryStorage) runMetricsDumpTicker() {
 	// запускаем тикер дампа статистики
 	dumpMetricsTicker := time.NewTicker(s.config.Server.StoreInterval)
 
-	fmt.Println("Run metrics dump every:", s.config.Server.StoreInterval)
+	s.logger.Info("Run metrics dump", zap.Duration("StoreInterval", s.config.Server.StoreInterval))
 
 	go func() {
 		for dumpTime := range dumpMetricsTicker.C {
 			err := s.DumpToFile(s.config.Server.StoreFile)
 			if err != nil {
-				fmt.Println(err)
+				s.logger.Error("DumpToFile go func", zap.Error(err))
 			}
-			fmt.Println("Metrics dump time:", dumpTime)
+
+			s.logger.Info("Metrics dump time", zap.Time("dumpTime", dumpTime))
 		}
 	}()
 }

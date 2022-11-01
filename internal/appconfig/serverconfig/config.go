@@ -2,11 +2,10 @@ package serverconfig
 
 import (
 	"flag"
-	"fmt"
-	"log"
 	"time"
 
 	"github.com/caarlos0/env/v6"
+	"go.uber.org/zap"
 )
 
 var (
@@ -21,6 +20,7 @@ var (
 type Config struct {
 	Server ServerConfig
 	HTTP   HTTPConfig
+	logger *zap.Logger
 }
 
 type ServerConfig struct {
@@ -39,8 +39,10 @@ type HTTPConfig struct {
 	ContentType string
 }
 
-func NewServerConfig() *Config {
-	config := Config{}
+func NewServerConfig(logger *zap.Logger) *Config {
+	config := Config{
+		logger: logger,
+	}
 	config.loadServerConfig()
 	config.loadHTTPConfig()
 	config.loadServerFlags()
@@ -67,16 +69,16 @@ func (config *Config) loadHTTPConfig() {
 }
 
 func (config *Config) loadServerEnvConfiguration() {
-	fmt.Println("Load env configuration")
+	config.logger.Info("Load env configuration")
 
 	err := env.Parse(&config.HTTP)
 	if err != nil {
-		log.Fatal(err)
+		config.logger.Fatal("loadServerEnvConfiguration env.Parse config.HTTP", zap.Error(err))
 	}
 
 	err = env.Parse(&config.Server)
 	if err != nil {
-		log.Fatal(err)
+		config.logger.Fatal("loadServerEnvConfiguration env.Parse config.Server", zap.Error(err))
 	}
 }
 

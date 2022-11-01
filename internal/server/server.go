@@ -1,9 +1,10 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+
+	"go.uber.org/zap"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"github.com/atrian/devmetrics/internal/server/handlers"
@@ -14,33 +15,44 @@ import (
 type Server struct {
 	config  *serverconfig.Config
 	storage storage.Repository
+	logger  *zap.Logger
 }
 
 func NewServer() *Server {
-	config := serverconfig.NewServerConfig()
+	// подключаем логгер
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		log.Fatal("Logger init error")
+	}
+	defer logger.Sync()
 
+	// подключаем конфиги
+	config := serverconfig.NewServerConfig(logger)
+
+	// подключаем storage
 	var appStorage storage.Repository
 	if config.Server.DBDSN == "" {
-		fmt.Println("Loading memory storage")
-		appStorage = storage.NewMemoryStorage(config)
+		logger.Info("Loading memory storage")
+		appStorage = storage.NewMemoryStorage(config, logger)
 	} else {
-		fmt.Println("Loading PGSQL storage")
-		appStorage = storage.NewPgSQLStorage(config)
+		logger.Info("Loading PGSQL storage")
+		appStorage, err = storage.NewPgSQLStorage(config, logger)
 	}
 
 	server := Server{
 		config:  config,
 		storage: appStorage,
+		logger:  logger,
 	}
 
 	return &server
 }
 
 func (s *Server) Run() {
-	fmt.Printf("Starting server at %v\n", s.config.HTTP.Address)
+	s.logger.Info("Starting server", zap.String("address", s.config.HTTP.Address))
 	defer s.Stop()
 
-	routes := router.New(handlers.New(s.config, s.storage))
+	routes := router.New(handlers.New(s.config, s.storage, s.logger))
 
 	// выполняем стартовые процедуры для хранилища
 	s.storage.RunOnStart()

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/zap"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"github.com/atrian/devmetrics/internal/server/handlers"
@@ -21,12 +22,15 @@ type HandlersTestSuite struct {
 	config  *serverconfig.Config
 	storage storage.Repository
 	router  *router.Router
+	logger  *zap.Logger
 }
 
 func (suite *HandlersTestSuite) SetupSuite() {
-	suite.config = serverconfig.NewServerConfig()
-	suite.storage = storage.NewMemoryStorage(suite.config)
-	suite.router = router.New(handlers.New(suite.config, suite.storage))
+	logger, _ := zap.NewDevelopment()
+	suite.logger = logger
+	suite.config = serverconfig.NewServerConfig(suite.logger)
+	suite.storage = storage.NewMemoryStorage(suite.config, suite.logger)
+	suite.router = router.New(handlers.New(suite.config, suite.storage, suite.logger))
 }
 
 func (suite *HandlersTestSuite) TestUpdateHandlers() {

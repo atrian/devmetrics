@@ -2,11 +2,10 @@ package agentconfig
 
 import (
 	"flag"
-	"fmt"
-	"log"
 	"time"
 
 	"github.com/caarlos0/env/v6"
+	"go.uber.org/zap"
 )
 
 var (
@@ -16,8 +15,9 @@ var (
 )
 
 type Config struct {
-	Agent AgentConfig
-	HTTP  HTTPConfig
+	Agent  AgentConfig
+	HTTP   HTTPConfig
+	logger *zap.Logger
 }
 
 type AgentConfig struct {
@@ -33,8 +33,10 @@ type HTTPConfig struct {
 	ContentType string
 }
 
-func NewConfig() *Config {
-	config := Config{}
+func NewConfig(logger *zap.Logger) *Config {
+	config := Config{
+		logger: logger,
+	}
 	config.loadAgentConfig()
 	config.loadHTTPConfig()
 	config.loadAgentFlags()
@@ -72,15 +74,15 @@ func (config *Config) loadAgentFlags() {
 }
 
 func (config *Config) loadAgentEnvConfiguration() {
-	fmt.Println("Load env configuration")
+	config.logger.Info("Load env configuration")
 
 	err := env.Parse(&config.HTTP)
 	if err != nil {
-		log.Fatal(err)
+		config.logger.Fatal("loadAgentEnvConfiguration env.Parse config.HTTP", zap.Error(err))
 	}
 
 	err = env.Parse(&config.Agent)
 	if err != nil {
-		log.Fatal(err)
+		config.logger.Fatal("loadAgentEnvConfiguration env.Parse config.Agent", zap.Error(err))
 	}
 }

@@ -6,13 +6,20 @@ import (
 	"io"
 	"net/http"
 
+	"go.uber.org/zap"
+
 	"github.com/atrian/devmetrics/internal/dto"
 )
 
 // UpdateJSONMetric обновление метрик POST /update в JSON
 func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		metric := unmarshallMetric(r.Body)
+		metric, err := h.unmarshallMetric(r.Body)
+
+		if err != nil {
+			h.logger.Error("UpdateJSONMetric cant unmarshallMetric", zap.Error(err))
+			http.Error(w, "Bad JSON", http.StatusBadRequest)
+		}
 
 		switch metric.MType {
 		case "gauge":
@@ -43,18 +50,19 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 		// устанавливаем статус-код 200
 		w.WriteHeader(http.StatusOK)
 
-		fmt.Println("Request OK, current metric value:", metric)
+		h.logger.Debug("Request OK", zap.String("metric", fmt.Sprintf("%#v", metric)))
 		json.NewEncoder(w).Encode(metric)
 	}
 }
 
-func unmarshallMetric(body io.ReadCloser) *dto.Metrics {
+func (h *Handler) unmarshallMetric(body io.ReadCloser) (*dto.Metrics, error) {
 	var metric dto.Metrics
 	decoder := json.NewDecoder(body)
 	err := decoder.Decode(&metric)
+
 	if err != nil {
-		fmt.Println(err) // TODO http.StatusBadRequest
+		return nil, err
 	}
 
-	return &metric
+	return &metric, nil
 }

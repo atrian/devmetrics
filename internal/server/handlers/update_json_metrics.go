@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/atrian/devmetrics/internal/dto"
 )
 
@@ -18,7 +20,11 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 		countersRequested := make(map[string]int)
 		gaugesRequested := make(map[string]int)
 
-		metrics := unmarshallMetrics(r)
+		metrics, err := h.unmarshallMetrics(r)
+		if err != nil {
+			h.logger.Error("UpdateJSONMetrics cant unmarshallMetric", zap.Error(err))
+			http.Error(w, "Bad JSON", http.StatusBadRequest)
+		}
 		verifiedMetrics := make([]dto.Metrics, 0, len(metrics))
 
 		for _, metric := range metrics {
@@ -92,7 +98,7 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 		w.Header().Set("content-type", h.config.HTTP.ContentType)
 		// устанавливаем статус-код 200
 		w.WriteHeader(http.StatusOK)
-		fmt.Println("Request OK")
+		h.logger.Debug("Request OK")
 
 		// формируем структуру JSON ответа
 		response := struct {
@@ -107,12 +113,12 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 	}
 }
 
-func unmarshallMetrics(r *http.Request) []dto.Metrics {
+func (h *Handler) unmarshallMetrics(r *http.Request) ([]dto.Metrics, error) {
 	var body io.Reader
 
 	// если в заголовках установлен Content-Encoding gzip, распаковываем тело
 	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-		body = decodeGzipBody(r.Body)
+		body = h.decodeGzipBody(r.Body)
 	} else {
 		body = r.Body
 	}
@@ -121,17 +127,16 @@ func unmarshallMetrics(r *http.Request) []dto.Metrics {
 	decoder := json.NewDecoder(body)
 	err := decoder.Decode(&metrics)
 	if err != nil {
-		fmt.Println("JSON decode error:", err)
-		fmt.Println("Metrics:", metrics)
+		return nil, err
 	}
 
-	return metrics
+	return metrics, nil
 }
 
-func decodeGzipBody(gzipR io.Reader) io.Reader {
+func (h *Handler) decodeGzipBody(gzipR io.Reader) io.Reader {
 	gz, err := gzip.NewReader(gzipR)
 	if err != nil {
-		fmt.Println("Error setting up gzip decoder", err)
+		h.logger.Error("decodeGzipBody cant set up gzip decoder", zap.Error(err))
 	}
 	return gz
 }

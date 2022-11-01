@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"go.uber.org/zap"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,14 +14,17 @@ type HandlersTestSuite struct {
 	suite.Suite
 	config  *serverconfig.Config
 	storage Repository
+	logger  *zap.Logger
 }
 
 func (suite *HandlersTestSuite) SetupSuite() {
-	suite.config = serverconfig.NewServerConfig()
+	logger, _ := zap.NewDevelopment()
+	suite.logger = logger
+	suite.config = serverconfig.NewServerConfig(suite.logger)
 }
 
 func (suite *HandlersTestSuite) SetupTest() {
-	suite.storage = NewMemoryStorage(suite.config)
+	suite.storage = NewMemoryStorage(suite.config, suite.logger)
 }
 
 func (suite *HandlersTestSuite) TestStorage_StoreCounter() {
