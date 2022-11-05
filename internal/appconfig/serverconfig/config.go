@@ -2,30 +2,25 @@ package serverconfig
 
 import (
 	"flag"
-	"fmt"
-	"log"
 	"time"
 
 	"github.com/caarlos0/env/v6"
+	"go.uber.org/zap"
 )
 
 var (
 	address       *string
 	file          *string
+	hashKey       *string
+	dsn           *string
 	restore       *bool
 	storeInterval *time.Duration
 )
 
-func init() {
-	address = flag.String("a", "127.0.0.1:8080", "Address and port used for server and agent.")
-	file = flag.String("f", "/tmp/devops-metrics-db.json", "Where to store metrics dump file.")
-	restore = flag.Bool("r", true, "Restore metrics from dump file on server start.")
-	storeInterval = flag.Duration("i", 300*time.Second, "Metrics dump interval in seconds.")
-}
-
 type Config struct {
 	Server ServerConfig
 	HTTP   HTTPConfig
+	logger *zap.Logger
 }
 
 type ServerConfig struct {
@@ -33,6 +28,8 @@ type ServerConfig struct {
 	StoreFile          string        `env:"STORE_FILE"`
 	Restore            bool          `env:"RESTORE"`
 	MetricTemplateFile string
+	HashKey            string `env:"KEY"`
+	DBDSN              string `env:"DATABASE_DSN"`
 }
 
 type HTTPConfig struct {
@@ -42,8 +39,10 @@ type HTTPConfig struct {
 	ContentType string
 }
 
-func NewServerConfig() *Config {
-	config := Config{}
+func NewServerConfig(logger *zap.Logger) *Config {
+	config := Config{
+		logger: logger,
+	}
 	config.loadServerConfig()
 	config.loadHTTPConfig()
 	config.loadServerFlags()
@@ -70,24 +69,33 @@ func (config *Config) loadHTTPConfig() {
 }
 
 func (config *Config) loadServerEnvConfiguration() {
-	fmt.Println("Load env configuration")
+	config.logger.Info("Load env configuration")
 
 	err := env.Parse(&config.HTTP)
 	if err != nil {
-		log.Fatal(err)
+		config.logger.Fatal("loadServerEnvConfiguration env.Parse config.HTTP", zap.Error(err))
 	}
 
 	err = env.Parse(&config.Server)
 	if err != nil {
-		log.Fatal(err)
+		config.logger.Fatal("loadServerEnvConfiguration env.Parse config.Server", zap.Error(err))
 	}
 }
 
 func (config *Config) loadServerFlags() {
+	address = flag.String("a", "127.0.0.1:8080", "Address and port used for server and agent.")
+	file = flag.String("f", "/tmp/devops-metrics-db.json", "Where to store metrics dump file.")
+	restore = flag.Bool("r", true, "Restore metrics from dump file on server start.")
+	storeInterval = flag.Duration("i", 300*time.Second, "Metrics dump interval in seconds.")
+	hashKey = flag.String("k", "", "Key for metrics sign validation")
+	dsn = flag.String("d", "", "DSN for PostgreSQL server")
+
 	flag.Parse()
 
 	config.HTTP.Address = *address
 	config.Server.StoreFile = *file
 	config.Server.Restore = *restore
 	config.Server.StoreInterval = *storeInterval
+	config.Server.HashKey = *hashKey
+	config.Server.DBDSN = *dsn
 }

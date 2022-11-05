@@ -2,23 +2,38 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+
+	"go.uber.org/zap"
 )
 
 // GetJSONMetric получение метрик GET /value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>
 func (h *Handler) GetJSONMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", h.config.HTTP.ContentType)
-		metricCandidate := unmarshallMetric(r.Body)
+		metricCandidate, err := h.unmarshallMetric(r.Body)
+
+		if err != nil {
+			h.logger.Error("GetJSONMetric cant unmarshallMetric", zap.Error(err))
+			http.Error(w, "Bad JSON", http.StatusBadRequest)
+		}
 
 		switch metricCandidate.MType {
 		case "gauge":
 			if metricValue, exist := h.storage.GetGauge(metricCandidate.ID); exist {
+
+				// подписываем метрику если установлен ключ шифрования
+				if h.config.Server.HashKey != "" {
+					metricCandidate.Hash = h.hasher.Hash(fmt.Sprintf("%s:gauge:%f", metricCandidate.ID, metricValue),
+						h.config.Server.HashKey)
+				}
+
 				metricCandidate.Value = &metricValue
 				JSONMetric, err := json.Marshal(metricCandidate)
 
 				if err != nil {
-					panic(err)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
 				}
 
 				w.WriteHeader(http.StatusOK)
@@ -31,11 +46,18 @@ func (h *Handler) GetJSONMetric() http.HandlerFunc {
 
 		case "counter":
 			if metricValue, exist := h.storage.GetCounter(metricCandidate.ID); exist {
+
+				// подписываем метрику если установлен ключ шифрования
+				if h.config.Server.HashKey != "" {
+					metricCandidate.Hash = h.hasher.Hash(fmt.Sprintf("%s:counter:%d", metricCandidate.ID, metricValue),
+						h.config.Server.HashKey)
+				}
+
 				metricCandidate.Delta = &metricValue
 				JSONMetric, err := json.Marshal(metricCandidate)
 
 				if err != nil {
-					panic(err)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
 				}
 
 				w.WriteHeader(http.StatusOK)

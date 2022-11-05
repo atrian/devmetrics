@@ -2,63 +2,84 @@ package storage
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
 	"os"
+	"time"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"github.com/atrian/devmetrics/internal/dto"
+	"go.uber.org/zap"
 )
 
 type MemoryStorage struct {
-	metrics *MetricsDicts
-	config  *serverconfig.Config
+	metrics     *MetricsDicts
+	config      *serverconfig.Config
+	logger      *zap.Logger
+	silentStore bool
 }
 
-func NewMemoryStorage(config *serverconfig.Config) *MemoryStorage {
+// Проверка имплементации интерфейса. Как это работает?
+var _ Repository = (*MemoryStorage)(nil)
+
+func NewMemoryStorage(config *serverconfig.Config, logger *zap.Logger) *MemoryStorage {
 	storage := MemoryStorage{
 		metrics: NewMetricsDicts(),
 		config:  config,
+		logger:  logger,
 	}
 	return &storage
 }
 
-func (s MemoryStorage) StoreGauge(name string, value float64) {
+func (s *MemoryStorage) StoreGauge(name string, value float64) error {
 	s.metrics.GaugeDict[name] = gauge(value)
-	s.syncWithFileOnUpdate()
+	if !s.silentStore {
+		err := s.syncWithFileOnUpdate()
+		if err != nil {
+			s.logger.Error("StoreGauge syncWithFileOnUpdate", zap.Error(err))
+			return err
+		}
+	}
+	return nil
 }
 
-func (s MemoryStorage) GetGauge(name string) (float64, bool) {
+func (s *MemoryStorage) GetGauge(name string) (float64, bool) {
 	value, exist := s.metrics.GaugeDict[name]
 	return float64(value), exist
 }
 
-func (s MemoryStorage) StoreCounter(name string, value int64) {
+func (s *MemoryStorage) StoreCounter(name string, value int64) error {
 	s.metrics.CounterDict[name] += counter(value)
-	s.syncWithFileOnUpdate()
+	if !s.silentStore {
+		err := s.syncWithFileOnUpdate()
+		if err != nil {
+			s.logger.Error("StoreCounter syncWithFileOnUpdate", zap.Error(err))
+			return err
+		}
+	}
+	return nil
 }
 
-func (s MemoryStorage) GetCounter(name string) (int64, bool) {
+func (s *MemoryStorage) GetCounter(name string) (int64, bool) {
 	value, exist := s.metrics.CounterDict[name]
 	return int64(value), exist
 }
 
-func (s MemoryStorage) GetMetrics() *MetricsDicts {
+func (s *MemoryStorage) GetMetrics() *MetricsDicts {
 	return s.metrics
 }
 
 // DumpToFile сохраняем данные из памяти в файл в json формате
-func (s MemoryStorage) DumpToFile(filename string) error {
-	fmt.Println("Dump data to file")
+func (s *MemoryStorage) DumpToFile(filename string) error {
+	s.logger.Debug("Dump data to file")
 
 	// STORE_FILE - пустое значение — отключает функцию записи на диск
 	if filename == "" {
+		s.logger.Debug("Filename is empty, abort dumping")
 		return nil
 	}
 
 	metricWriter, err := NewMetricWriter(filename)
 	if err != nil {
-		log.Fatal(err)
+		s.logger.Error("NewMetricWriter error", zap.Error(err))
 	}
 
 	defer metricWriter.Close()
@@ -91,6 +112,7 @@ func (s MemoryStorage) DumpToFile(filename string) error {
 
 	// пишем все метрики в JSON
 	if err := metricWriter.WriteMetric(&metricsDTO); err != nil {
+		s.logger.Error("WriteMetric error", zap.Error(err))
 		return err
 	}
 
@@ -98,12 +120,12 @@ func (s MemoryStorage) DumpToFile(filename string) error {
 }
 
 // RestoreFromFile Восстановление данных из файла
-func (s MemoryStorage) RestoreFromFile(filename string) error {
-	fmt.Println("Restore metrics from file")
+func (s *MemoryStorage) RestoreFromFile(filename string) error {
+	s.logger.Info("Restore metrics from file")
 
 	file, err := os.OpenFile(filename, os.O_RDONLY|os.O_CREATE, 0777)
 	if err != nil {
-		fmt.Println("Can't load file:", err)
+		s.logger.Warn("RestoreFromFile can't load file", zap.Error(err))
 	}
 
 	var metrics []dto.Metrics
@@ -111,9 +133,16 @@ func (s MemoryStorage) RestoreFromFile(filename string) error {
 
 	err = decoder.Decode(&metrics)
 	if err != nil {
-		fmt.Println("Can't Decode metrics:", err)
+		s.logger.Warn("Can't Decode metrics", zap.Error(err))
 	}
 
+	s.SetMetrics(metrics)
+
+	return nil
+}
+
+func (s *MemoryStorage) SetMetrics(metrics []dto.Metrics) {
+	s.silentStore = true
 	for key, metricCandidate := range metrics {
 		_ = key
 		switch metricCandidate.MType {
@@ -124,16 +153,64 @@ func (s MemoryStorage) RestoreFromFile(filename string) error {
 		default:
 		}
 	}
-
-	return nil
+	s.silentStore = false
 }
 
 // syncWithFileOnUpdate сохраняем дамп метрик в файл при обновлении любой метрики если StoreInterval = 0
-func (s MemoryStorage) syncWithFileOnUpdate() {
+func (s *MemoryStorage) syncWithFileOnUpdate() error {
 	if s.config.Server.StoreInterval == 0 {
 		err := s.DumpToFile(s.config.Server.StoreFile)
 		if err != nil {
-			log.Fatal(err)
+			s.logger.Error("syncWithFileOnUpdate", zap.Error(err))
+			return err
 		}
 	}
+	return nil
+}
+
+// RunOnStart метод вызывается при старте хранилища
+func (s *MemoryStorage) RunOnStart() {
+	// RESTORE (по умолчанию true) — булево значение (true/false), определяющее,
+	// загружать или нет начальные значения из указанного файла при старте сервера.
+	if s.config.Server.Restore {
+		err := s.RestoreFromFile(s.config.Server.StoreFile)
+		if err != nil {
+			s.logger.Error("RunOnStart - RestoreFromFile call", zap.Error(err))
+		}
+	}
+
+	// STORE_INTERVAL (по умолчанию 300) — интервал времени в секундах,
+	// по истечении которого текущие показания сервера сбрасываются на диск
+	// (значение 0 — делает запись синхронной).
+	if s.config.Server.StoreInterval != 0 {
+		s.runMetricsDumpTicker()
+	}
+}
+
+// RunOnClose метод вызывается при штатном завершении
+func (s *MemoryStorage) RunOnClose() {
+	s.logger.Info("Dump metrics to file before shutdown")
+	err := s.DumpToFile(s.config.Server.StoreFile)
+	if err != nil {
+		s.logger.Error("RunOnClose DumpToFile", zap.Error(err))
+	}
+}
+
+// runMetricsDumpTicker дамп хранилища из памяти в файл с запуском по тикеру
+func (s *MemoryStorage) runMetricsDumpTicker() {
+	// запускаем тикер дампа статистики
+	dumpMetricsTicker := time.NewTicker(s.config.Server.StoreInterval)
+
+	s.logger.Info("Run metrics dump", zap.Duration("StoreInterval", s.config.Server.StoreInterval))
+
+	go func() {
+		for dumpTime := range dumpMetricsTicker.C {
+			err := s.DumpToFile(s.config.Server.StoreFile)
+			if err != nil {
+				s.logger.Error("DumpToFile go func", zap.Error(err))
+			}
+
+			s.logger.Info("Metrics dump time", zap.Time("dumpTime", dumpTime))
+		}
+	}()
 }

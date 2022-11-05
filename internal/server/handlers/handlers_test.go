@@ -1,4 +1,4 @@
-package handlers
+package handlers_test
 
 import (
 	"io"
@@ -6,17 +6,35 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
-	"github.com/atrian/devmetrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	"go.uber.org/zap"
+
+	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
+	"github.com/atrian/devmetrics/internal/server/handlers"
+	"github.com/atrian/devmetrics/internal/server/router"
+	"github.com/atrian/devmetrics/internal/server/storage"
 )
 
-func TestNewHandler(t *testing.T) {
-	config := serverconfig.NewServerConfig()
-	memStorage := storage.NewMemoryStorage(config)
-	r := NewHandler(config, memStorage)
-	ts := httptest.NewServer(r)
+type HandlersTestSuite struct {
+	suite.Suite
+	config  *serverconfig.Config
+	storage storage.Repository
+	router  *router.Router
+	logger  *zap.Logger
+}
+
+func (suite *HandlersTestSuite) SetupSuite() {
+	logger, _ := zap.NewDevelopment()
+	suite.logger = logger
+	suite.config = serverconfig.NewServerConfig(suite.logger)
+	suite.storage = storage.NewMemoryStorage(suite.config, suite.logger)
+	suite.router = router.New(handlers.New(suite.config, suite.storage, suite.logger))
+}
+
+func (suite *HandlersTestSuite) TestUpdateHandlers() {
+	ts := httptest.NewServer(suite.router)
 	defer ts.Close()
 
 	// тестовые кейсы из прошлых инкрементов
@@ -61,7 +79,7 @@ func TestNewHandler(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		t.Run(tc.testName, func(t *testing.T) {
+		suite.T().Run(tc.testName, func(t *testing.T) {
 			statusCode, body := testRequest(t, ts, tc.method, tc.endpoint)
 			assert.Equal(t, tc.statusCode, statusCode)
 			assert.Equal(t, tc.expectedBody, body)
@@ -69,19 +87,21 @@ func TestNewHandler(t *testing.T) {
 	}
 }
 
-func TestUpdateCounterInSeries(t *testing.T) {
-	config := serverconfig.NewServerConfig()
-	memStorage := storage.NewMemoryStorage(config)
-	r := NewHandler(config, memStorage)
-	ts := httptest.NewServer(r)
+func (suite *HandlersTestSuite) TestUpdateCounterInSeries() {
+	ts := httptest.NewServer(suite.router)
 	defer ts.Close()
 
 	// последовательное сохранение значения счетчика
-	_, _ = testRequest(t, ts, "POST", "/update/counter/TestCounter/5")
-	_, _ = testRequest(t, ts, "POST", "/update/counter/TestCounter/8")
-	statusCode, body := testRequest(t, ts, "GET", "/value/counter/TestCounter")
-	assert.Equal(t, http.StatusOK, statusCode)
-	assert.Equal(t, "13", body)
+	_, _ = testRequest(suite.T(), ts, "POST", "/update/counter/TestCounter/5")
+	_, _ = testRequest(suite.T(), ts, "POST", "/update/counter/TestCounter/8")
+	statusCode, body := testRequest(suite.T(), ts, "GET", "/value/counter/TestCounter")
+	assert.Equal(suite.T(), http.StatusOK, statusCode)
+	assert.Equal(suite.T(), "13", body)
+}
+
+// Для запуска через Go test
+func TestHandlersTestSuite(t *testing.T) {
+	suite.Run(t, new(HandlersTestSuite))
 }
 
 // Ctrl-c Ctrl-v из учебника практикума.
@@ -96,6 +116,5 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (int, s
 	require.NoError(t, err)
 
 	defer resp.Body.Close()
-
 	return resp.StatusCode, string(respBody)
 }

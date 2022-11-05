@@ -1,8 +1,10 @@
 package agent
 
 import (
-	"fmt"
+	"log"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
 )
@@ -15,11 +17,15 @@ type (
 type Agent struct {
 	config  *agentconfig.Config
 	metrics *MetricsDics
+	logger  *zap.Logger
 }
 
 func (a *Agent) Run() {
-	fmt.Printf("Agent started with PollInterval: %v, ReportInterval: %v, Server address: %v\n",
-		a.config.Agent.PollInterval, a.config.Agent.ReportInterval, a.config.HTTP.Address)
+	a.logger.Info("Agent started",
+		zap.Duration("PollInterval", a.config.Agent.PollInterval),
+		zap.Duration("ReportInterval", a.config.Agent.ReportInterval),
+		zap.String("Server address", a.config.HTTP.Address),
+	)
 
 	// запускаем тикер сбора статистики
 	refreshStatsTicker := time.NewTicker(a.config.Agent.PollInterval)
@@ -31,31 +37,38 @@ func (a *Agent) Run() {
 	for {
 		select {
 		case refreshTime := <-refreshStatsTicker.C:
-			fmt.Println("refresh time:", refreshTime)
+			a.logger.Debug("Runtime metrics refresh", zap.Time("time", refreshTime))
 			a.RefreshStats()
 		case uploadTime := <-uploadStatsTicker.C:
-			fmt.Println("upload time", uploadTime)
+			a.logger.Debug("Metrics upload", zap.Time("time", uploadTime))
 			a.UploadStats()
 		}
 	}
 }
 
 func NewAgent() *Agent {
+	// подключаем логгер
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		log.Fatal("Logger init error")
+	}
+	defer logger.Sync()
+
 	agent := &Agent{
-		config:  agentconfig.NewConfig(),
+		config:  agentconfig.NewConfig(logger),
 		metrics: NewMetricsDicts(),
+		logger:  logger,
 	}
 	return agent
 }
 
 func (a *Agent) RefreshStats() {
 	a.metrics.updateMetrics()
-	fmt.Println("Runtime stats updated")
-	fmt.Println(a.metrics.CounterDict["PollCount"].value)
+	a.logger.Info("Runtime stats updated", zap.Int64("PollCount", int64(a.metrics.CounterDict["PollCount"].value)))
 }
 
 func (a *Agent) UploadStats() {
-	uploader := NewUploader(&a.config.HTTP)
-	uploader.SendStat(a.metrics)
-	fmt.Println("Upload stats")
+	uploader := NewUploader(a.config, a.logger)
+	uploader.SendAllStats(a.metrics)
+	a.logger.Info("Upload stats")
 }
