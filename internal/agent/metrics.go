@@ -16,7 +16,7 @@ import (
 const (
 	RuntimeMetric = iota
 	GopsMetric
-	CpuMetric
+	CPUMetric
 )
 
 type MetricsDics struct {
@@ -204,7 +204,7 @@ func (md *MetricsDics) updateCPUMetrics() {
 	for core, cpuPercent := range cpuStats {
 		metricName := fmt.Sprintf("CPUutilization%v", core)
 		md.GaugeDict[metricName] = &GaugeMetric{
-			source: CpuMetric,
+			source: CPUMetric,
 			value:  gauge(cpuPercent),
 			pullValue: func(sh *StatsHolder) gauge {
 				return gauge(0)
