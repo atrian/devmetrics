@@ -24,7 +24,6 @@ type PgSQLStorage struct {
 	logger  *zap.Logger
 }
 
-// Проверка имплементации интерфейса. Как это работает?
 var _ Repository = (*PgSQLStorage)(nil)
 
 func NewPgSQLStorage(config *serverconfig.Config, logger *zap.Logger) (*PgSQLStorage, error) {
@@ -80,7 +79,7 @@ func (s *PgSQLStorage) StoreCounter(name string, value int64) error {
 func (s *PgSQLStorage) GetGauge(name string) (float64, bool) {
 	var value float64
 
-	sqlQuery := `SELECT value FROM public.metrics WHERE id=$1;`
+	sqlQuery := `SELECT value FROM public.metrics WHERE id=$1 AND type='gauge';`
 	row := s.pgPool.QueryRow(context.Background(), sqlQuery, name)
 
 	switch err := row.Scan(&value); err {
@@ -95,7 +94,7 @@ func (s *PgSQLStorage) GetGauge(name string) (float64, bool) {
 func (s *PgSQLStorage) GetCounter(name string) (int64, bool) {
 	var delta int64
 
-	sqlQuery := `SELECT delta FROM public.metrics WHERE id=$1;`
+	sqlQuery := `SELECT delta FROM public.metrics WHERE id=$1 AND type='counter';`
 	row := s.pgPool.QueryRow(context.Background(), sqlQuery, name)
 
 	switch err := row.Scan(&delta); err {

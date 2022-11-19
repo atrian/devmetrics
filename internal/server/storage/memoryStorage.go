@@ -5,9 +5,10 @@ import (
 	"os"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"github.com/atrian/devmetrics/internal/dto"
-	"go.uber.org/zap"
 )
 
 type MemoryStorage struct {
@@ -17,7 +18,6 @@ type MemoryStorage struct {
 	silentStore bool
 }
 
-// Проверка имплементации интерфейса. Как это работает?
 var _ Repository = (*MemoryStorage)(nil)
 
 func NewMemoryStorage(config *serverconfig.Config, logger *zap.Logger) *MemoryStorage {
