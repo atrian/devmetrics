@@ -1,9 +1,13 @@
 package agent
 
 import (
+	"fmt"
+	"github.com/shirou/gopsutil/v3/cpu"
 	"math/rand"
 	"runtime"
 	"sync"
+
+	"github.com/shirou/gopsutil/v3/mem"
 
 	"github.com/atrian/devmetrics/internal/dto"
 )
@@ -14,9 +18,38 @@ type MetricsDics struct {
 	mu          sync.RWMutex
 }
 
+// StatsHolder контейнер для разных источников статистики
+type StatsHolder struct {
+	RuntimeMemStat *runtime.MemStats
+	GopsMemStat    *mem.VirtualMemoryStat
+	mu             sync.RWMutex
+}
+
+func NewMetricHolder() *StatsHolder {
+	sh := StatsHolder{}
+	sh.updateGopsMemStat()
+	sh.updateRuntimeStat()
+
+	return &sh
+}
+
+func (sh *StatsHolder) updateRuntimeStat() {
+	sh.mu.Lock()
+	var stat runtime.MemStats
+	runtime.ReadMemStats(&stat)
+	sh.RuntimeMemStat = &stat
+	sh.mu.Unlock()
+}
+
+func (sh *StatsHolder) updateGopsMemStat() {
+	sh.mu.Lock()
+	sh.GopsMemStat, _ = mem.VirtualMemory()
+	sh.mu.Unlock()
+}
+
 type GaugeMetric struct {
 	value     gauge
-	pullValue func(stats *runtime.MemStats) gauge
+	pullValue func(sh *StatsHolder) gauge
 }
 
 func (g *GaugeMetric) getGaugeValue() float64 {
@@ -35,89 +68,95 @@ func (c *CounterMetric) getCounterValue() int64 {
 func NewMetricsDicts() *MetricsDics {
 	dict := MetricsDics{
 		GaugeDict: map[string]*GaugeMetric{
-			"Alloc": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.Alloc)
+			"Alloc": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.Alloc)
 			}},
-			"BuckHashSys": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.BuckHashSys)
+			"BuckHashSys": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.BuckHashSys)
 			}},
-			"Frees": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.Frees)
+			"Frees": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.Frees)
 			}},
-			"GCCPUFraction": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.GCCPUFraction)
+			"GCCPUFraction": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.GCCPUFraction)
 			}},
-			"GCSys": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.GCSys)
+			"GCSys": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.GCSys)
 			}},
-			"HeapAlloc": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.HeapAlloc)
+			"HeapAlloc": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.HeapAlloc)
 			}},
-			"HeapIdle": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.HeapIdle)
+			"HeapIdle": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.HeapIdle)
 			}},
-			"HeapInuse": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.HeapInuse)
+			"HeapInuse": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.HeapInuse)
 			}},
-			"HeapObjects": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.HeapObjects)
+			"HeapObjects": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.HeapObjects)
 			}},
-			"HeapReleased": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.HeapReleased)
+			"HeapReleased": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.HeapReleased)
 			}},
-			"HeapSys": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.HeapSys)
+			"HeapSys": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.HeapSys)
 			}},
-			"LastGC": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.LastGC)
+			"LastGC": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.LastGC)
 			}},
-			"Lookups": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.Lookups)
+			"Lookups": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.Lookups)
 			}},
-			"MCacheInuse": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.MCacheInuse)
+			"MCacheInuse": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.MCacheInuse)
 			}},
-			"MCacheSys": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.MCacheSys)
+			"MCacheSys": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.MCacheSys)
 			}},
-			"MSpanInuse": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.MSpanInuse)
+			"MSpanInuse": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.MSpanInuse)
 			}},
-			"MSpanSys": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.MSpanSys)
+			"MSpanSys": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.MSpanSys)
 			}},
-			"Mallocs": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.Mallocs)
+			"Mallocs": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.Mallocs)
 			}},
-			"NextGC": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.NextGC)
+			"NextGC": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.NextGC)
 			}},
-			"NumForcedGC": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.NumForcedGC)
+			"NumForcedGC": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.NumForcedGC)
 			}},
-			"NumGC": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.NumGC)
+			"NumGC": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.NumGC)
 			}},
-			"OtherSys": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.OtherSys)
+			"OtherSys": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.OtherSys)
 			}},
-			"PauseTotalNs": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.PauseTotalNs)
+			"PauseTotalNs": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.PauseTotalNs)
 			}},
-			"StackInuse": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.StackInuse)
+			"StackInuse": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.StackInuse)
 			}},
-			"StackSys": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.StackSys)
+			"StackSys": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.StackSys)
 			}},
-			"Sys": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.Sys)
+			"Sys": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.Sys)
 			}},
-			"TotalAlloc": {pullValue: func(stats *runtime.MemStats) gauge {
-				return gauge(stats.TotalAlloc)
+			"TotalAlloc": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.RuntimeMemStat.TotalAlloc)
 			}},
-			"RandomValue": {pullValue: func(stats *runtime.MemStats) gauge {
+			"RandomValue": {pullValue: func(sh *StatsHolder) gauge {
 				return gauge(rand.Float64())
+			}},
+			"TotalMemory": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.GopsMemStat.Total)
+			}},
+			"FreeMemory": {pullValue: func(sh *StatsHolder) gauge {
+				return gauge(sh.GopsMemStat.Free)
 			}},
 		},
 		CounterDict: map[string]*CounterMetric{
@@ -132,20 +171,36 @@ func NewMetricsDicts() *MetricsDics {
 }
 
 func (md *MetricsDics) updateMetrics() {
+
 	md.mu.Lock()         // блокируем mutex
 	defer md.mu.Unlock() // разблокируем после обновления всех метрик
 
 	// получаем данные мониторинга
-	runtimeStats := runtime.MemStats{}
-	runtime.ReadMemStats(&runtimeStats)
+	statsHolder := NewMetricHolder()
 
 	// обновляем данные мониторинга по списку, обновляем счетчики
 	for _, metric := range md.GaugeDict {
-		metric.value = metric.pullValue(&runtimeStats)
+		metric.value = metric.pullValue(statsHolder)
 	}
 	for _, ct := range md.CounterDict {
 		ct.value = ct.calculateNextValue(ct)
 	}
+}
+
+func (md *MetricsDics) getCPUsStats() map[string]gauge {
+	cpus := make(map[string]gauge)
+
+	cpuStats, err := cpu.Percent(0, true)
+	if err != nil {
+		// TODO добавить логгер
+	}
+
+	for core, cpuPercent := range cpuStats {
+		metricName := fmt.Sprintf("CPUutilization%v", core)
+		cpus[metricName] = gauge(cpuPercent)
+	}
+
+	return cpus
 }
 
 // exportMetrics возвращает слайс DTO с подписанными метриками
@@ -155,6 +210,7 @@ func (md *MetricsDics) exportMetrics(sign func(metricType, id string, delta *int
 
 	exportedData := make([]dto.Metrics, 0, len(md.GaugeDict)+len(md.CounterDict))
 
+	// выгружаем основные gauge метрики
 	for key, metric := range md.GaugeDict {
 		gaugeValue := metric.getGaugeValue()
 		exportedData = append(exportedData, dto.Metrics{
@@ -166,6 +222,20 @@ func (md *MetricsDics) exportMetrics(sign func(metricType, id string, delta *int
 		})
 	}
 
+	// выгружаем метрики CPU
+	cpus := md.getCPUsStats()
+	for key, value := range cpus {
+		cpuUsage := float64(value)
+		exportedData = append(exportedData, dto.Metrics{
+			ID:    key,
+			MType: "gauge",
+			Delta: nil,
+			Value: &cpuUsage,
+			Hash:  sign("gauge", key, nil, &cpuUsage),
+		})
+	}
+
+	// выгружаем основные counter метрики
 	for key, ct := range md.CounterDict {
 		counterValue := ct.getCounterValue()
 		exportedData = append(exportedData, dto.Metrics{
