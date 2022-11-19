@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	RUNTIME_METRIC = iota
-	GOPS_METRIC
-	CPU_METRIC
+	RuntimeMetric = iota
+	GopsMetric
+	CpuMetric
 )
 
 type MetricsDics struct {
@@ -163,10 +163,10 @@ func NewMetricsDicts(logger logger.Logger) *MetricsDics {
 			}},
 			"TotalMemory": {pullValue: func(sh *StatsHolder) gauge {
 				return gauge(sh.GopsMemStat.Total)
-			}, source: GOPS_METRIC},
+			}, source: GopsMetric},
 			"FreeMemory": {pullValue: func(sh *StatsHolder) gauge {
 				return gauge(sh.GopsMemStat.Free)
-			}, source: GOPS_METRIC},
+			}, source: GopsMetric},
 		},
 		CounterDict: map[string]*CounterMetric{
 			"PollCount": {calculateNextValue: func(c *CounterMetric) counter {
@@ -184,7 +184,7 @@ func (md *MetricsDics) updateRuntimeMetrics() {
 	md.mu.Lock()         // блокируем mutex
 	defer md.mu.Unlock() // разблокируем после обновления всех метрик
 
-	md.update(RUNTIME_METRIC)
+	md.update(RuntimeMetric)
 }
 
 func (md *MetricsDics) updateGopsMetrics() {
@@ -192,7 +192,7 @@ func (md *MetricsDics) updateGopsMetrics() {
 	defer md.mu.Unlock() // разблокируем после обновления всех метрик
 
 	md.updateCPUMetrics() // обновляем метрики CPU
-	md.update(GOPS_METRIC)
+	md.update(GopsMetric)
 }
 
 func (md *MetricsDics) updateCPUMetrics() {
@@ -204,7 +204,7 @@ func (md *MetricsDics) updateCPUMetrics() {
 	for core, cpuPercent := range cpuStats {
 		metricName := fmt.Sprintf("CPUutilization%v", core)
 		md.GaugeDict[metricName] = &GaugeMetric{
-			source: CPU_METRIC,
+			source: CpuMetric,
 			value:  gauge(cpuPercent),
 			pullValue: func(sh *StatsHolder) gauge {
 				return gauge(0)
@@ -220,13 +220,13 @@ func (md *MetricsDics) update(metricType int) {
 	// обновляем данные мониторинга по списку с учетом источника
 	for _, metric := range md.GaugeDict {
 		switch metricType {
-		case RUNTIME_METRIC:
-			if metric.source != RUNTIME_METRIC {
+		case RuntimeMetric:
+			if metric.source != RuntimeMetric {
 				continue
 			}
 			metric.value = metric.pullValue(statsHolder)
-		case GOPS_METRIC:
-			if metric.source != GOPS_METRIC {
+		case GopsMetric:
+			if metric.source != GopsMetric {
 				continue
 			}
 			metric.value = metric.pullValue(statsHolder)
