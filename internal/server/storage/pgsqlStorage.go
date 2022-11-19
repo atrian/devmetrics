@@ -11,25 +11,27 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"go.uber.org/zap"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"github.com/atrian/devmetrics/internal/dto"
+	"github.com/atrian/devmetrics/pkg/logger"
 )
+
+const PoolStatInterval = 30 * time.Second
 
 type PgSQLStorage struct {
 	pgPool  *pgxpool.Pool
 	metrics *MetricsDicts
 	config  *serverconfig.Config
-	logger  *zap.Logger
+	logger  logger.Logger
 }
 
 var _ Repository = (*PgSQLStorage)(nil)
 
-func NewPgSQLStorage(config *serverconfig.Config, logger *zap.Logger) (*PgSQLStorage, error) {
+func NewPgSQLStorage(config *serverconfig.Config, logger logger.Logger) (*PgSQLStorage, error) {
 	dbPool, poolErr := pgxpool.Connect(context.Background(), config.Server.DBDSN)
 	if poolErr != nil {
-		logger.Error("NewPgSQLStorage pgxpool.Connect", zap.Error(poolErr))
+		logger.Error("NewPgSQLStorage pgxpool.Connect", poolErr)
 		return nil, poolErr
 	}
 
@@ -53,7 +55,7 @@ func upsertMetricQuery() string {
 func (s *PgSQLStorage) StoreGauge(name string, value float64) error {
 	_, err := s.pgPool.Exec(context.Background(), upsertMetricQuery(), name, "gauge", nil, value)
 	if err != nil {
-		s.logger.Error("StoreGauge pgPool.Exec", zap.Error(err))
+		s.logger.Error("StoreGauge pgPool.Exec", err)
 		return fmt.Errorf(`failed store gauge: %w`, err)
 	}
 	return nil
@@ -69,7 +71,7 @@ func (s *PgSQLStorage) StoreCounter(name string, value int64) error {
 	// Порядок аргументов id, type, delta, value
 	_, err := s.pgPool.Exec(context.Background(), upsertMetricQuery(), name, "counter", value, nil)
 	if err != nil {
-		s.logger.Error("StoreCounter pgPool.Exec", zap.Error(err))
+		s.logger.Error("StoreCounter pgPool.Exec", err)
 		return fmt.Errorf(`failed store counter: %w`, err)
 	}
 
@@ -86,7 +88,7 @@ func (s *PgSQLStorage) GetGauge(name string) (float64, bool) {
 	case nil:
 		return value, true
 	default:
-		s.logger.Debug("GetGauge row.Scan", zap.Error(err))
+		s.logger.Debug(fmt.Sprintf("GetGauge row.Scan: %v", err))
 		return value, false
 	}
 }
@@ -101,7 +103,7 @@ func (s *PgSQLStorage) GetCounter(name string) (int64, bool) {
 	case nil:
 		return delta, true
 	default:
-		s.logger.Debug("GetCounter row.Scan", zap.Error(err))
+		s.logger.Debug(fmt.Sprintf("GetCounter row.Scan: %v", err))
 		return delta, false
 	}
 }
@@ -118,7 +120,7 @@ func (s *PgSQLStorage) GetMetrics() *MetricsDicts {
 	rows, err := s.pgPool.Query(context.Background(), sqlStatement)
 
 	if err != nil {
-		s.logger.Error("GetMetrics pgPool.Query", zap.Error(err))
+		s.logger.Error("GetMetrics pgPool.Query", err)
 		return s.metrics
 	}
 	defer rows.Close()
@@ -126,7 +128,7 @@ func (s *PgSQLStorage) GetMetrics() *MetricsDicts {
 	for rows.Next() {
 		err = rows.Scan(&metricID, &metricType, &delta, &value)
 		if err != nil {
-			s.logger.Error("GetMetrics rows.Scan", zap.Error(err))
+			s.logger.Error("GetMetrics rows.Scan", err)
 			continue
 		}
 
@@ -151,7 +153,7 @@ func (s *PgSQLStorage) SetMetrics(metrics []dto.Metrics) {
 	// начинаем транзакцию
 	tx, err := s.pgPool.Begin(ctx)
 	if err != nil {
-		s.logger.Error("SetMetrics pgPool.Begin", zap.Error(err))
+		s.logger.Error("SetMetrics pgPool.Begin", err)
 	}
 
 	batch := &pgx.Batch{}
@@ -163,19 +165,15 @@ func (s *PgSQLStorage) SetMetrics(metrics []dto.Metrics) {
 			// получаем сохраненное ранее значение в памяти в рамках одного batch запроса
 			memoryCounter := memoryCounters[metric.ID]
 
-			s.logger.Debug("SetMetrics counter value update: ",
-				zap.Int64("storedCounter", storedCounter),
-				zap.Int64("memoryCounter", memoryCounter),
-				zap.Int64("*metric.Delta", *metric.Delta),
-				zap.Int64("position sum", storedCounter+memoryCounter+*metric.Delta))
+			s.logger.Debug(fmt.Sprintf("SetMetrics counter value update: storedCounter %v, memoryCounter: %v, *metric.Delta: %v, position sum: %v",
+				storedCounter, memoryCounter, *metric.Delta, storedCounter+memoryCounter+*metric.Delta))
 
 			batch.Queue(upsertMetricQuery(), metric.ID, metric.MType, *metric.Delta+storedCounter+memoryCounter, nil)
 			// обновляем сумму в памяти
 			memoryCounters[metric.ID] += *metric.Delta
 		case "gauge":
 
-			s.logger.Debug("SetMetrics gauge value update: ",
-				zap.Float64("*metric.Value", *metric.Value))
+			s.logger.Debug(fmt.Sprintf("SetMetrics gauge value update: %v", *metric.Value))
 
 			// записываем последнее если пришла пачка одинаковых
 			batch.Queue(upsertMetricQuery(), metric.ID, metric.MType, nil, *metric.Value)
@@ -193,7 +191,7 @@ func (s *PgSQLStorage) SetMetrics(metrics []dto.Metrics) {
 	// коммит транзакции
 	err = tx.Commit(ctx)
 	if err != nil {
-		s.logger.Error("SetMetrics Transaction error", zap.Error(err))
+		s.logger.Error("SetMetrics Transaction error", err)
 	}
 }
 
@@ -218,35 +216,33 @@ func (s *PgSQLStorage) runMigrations(dsn string) {
 		"file://internal/server/database/migrations",
 		dsn)
 	if mErr != nil {
-		s.logger.Fatal("Can't prepare for migrations", zap.Error(mErr))
+		s.logger.Fatal("Can't prepare for migrations", mErr)
 	}
 	mErr = m.Up()
 	if mErr != nil {
-		s.logger.Debug("Migration complete with error:", zap.Error(mErr))
+		s.logger.Debug(fmt.Sprintf("Migration complete with error: %v", mErr))
 	} else {
 		s.logger.Info("Successfully migrated")
 	}
 }
 
 func (s *PgSQLStorage) poolStatLogger(pgPool *pgxpool.Pool) {
-	statInterval := 30 * time.Second
-
 	// запускаем тикер дампа статистики пула соединений с БД
-	dumpPGPoolStatTicker := time.NewTicker(statInterval)
+	dumpPGPoolStatTicker := time.NewTicker(PoolStatInterval)
 
-	s.logger.Info("Start pgPool stat collection", zap.Duration("statInterval", statInterval))
+	s.logger.Info(fmt.Sprintf("Start pgPool stat collection. statInterval: %v", PoolStatInterval))
 
 	go func() {
 		for statTime := range dumpPGPoolStatTicker.C {
 			stat := pgPool.Stat()
-			s.logger.Debug("PGPool stat",
-				zap.Time("datetime", statTime),
-				zap.Int32("TotalConns", stat.TotalConns()),
-				zap.Int32("AcquiredConns", stat.AcquiredConns()),
-				zap.Int32("IdleConns", stat.IdleConns()),
-				zap.Int64("NewConnsCount", stat.NewConnsCount()),
-				zap.Int32("MaxConns", stat.MaxConns()),
-			)
+
+			s.logger.Debug(fmt.Sprintf("PGPool stat: %v :: TotalConns: %v, AcquiredConns: %v, IdleConns: %v, NewConnsCount: %v, MaxConns: %v.",
+				statTime,
+				stat.TotalConns(),
+				stat.AcquiredConns(),
+				stat.IdleConns(),
+				stat.NewConnsCount(),
+				stat.MaxConns()))
 		}
 	}()
 }

@@ -6,8 +6,6 @@ import (
 	"io"
 	"net/http"
 
-	"go.uber.org/zap"
-
 	"github.com/atrian/devmetrics/internal/dto"
 )
 
@@ -17,7 +15,7 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 		metric, err := h.unmarshallMetric(r.Body)
 
 		if err != nil {
-			h.logger.Error("UpdateJSONMetric cant unmarshallMetric", zap.Error(err))
+			h.logger.Error("UpdateJSONMetric cant unmarshallMetric", err)
 			http.Error(w, "Bad JSON", http.StatusBadRequest)
 		}
 
@@ -50,7 +48,7 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 		// устанавливаем статус-код 200
 		w.WriteHeader(http.StatusOK)
 
-		h.logger.Debug("Request OK", zap.String("metric", fmt.Sprintf("%#v", metric)))
+		h.logger.Debug(fmt.Sprintf("Request OK. metric %#v", metric))
 		json.NewEncoder(w).Encode(metric)
 	}
 }

@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"go.uber.org/zap"
+	"github.com/atrian/devmetrics/pkg/logger"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,12 +14,11 @@ type HandlersTestSuite struct {
 	suite.Suite
 	config  *serverconfig.Config
 	storage Repository
-	logger  *zap.Logger
+	logger  logger.Logger
 }
 
 func (suite *HandlersTestSuite) SetupSuite() {
-	logger, _ := zap.NewDevelopment()
-	suite.logger = logger
+	suite.logger = logger.NewZapLogger()
 	suite.config = serverconfig.NewServerConfig(suite.logger)
 }
 

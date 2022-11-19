@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
 )
 
 // UpdateMetric обновление метрик POST /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
@@ -25,7 +24,7 @@ func (h *Handler) UpdateMetric() http.HandlerFunc {
 			return
 		}
 
-		h.logger.Debug("UpdateMetric chi.URLParam", zap.String("metricType", metricType))
+		h.logger.Debug(fmt.Sprintf("UpdateMetric chi.URLParam. metricType %v", metricType))
 
 		if metricType == "gauge" {
 			floatValue, err := strconv.ParseFloat(metricValue, 64)
@@ -35,14 +34,12 @@ func (h *Handler) UpdateMetric() http.HandlerFunc {
 
 			err = h.storage.StoreGauge(metricTitle, floatValue)
 			if err != nil {
-				h.logger.Error("Cant store gauge metric", zap.Error(errors.Unwrap(err)))
+				h.logger.Error("Cant store gauge metric", errors.Unwrap(err))
 				http.Error(w, "Something went wrong", http.StatusInternalServerError)
 			}
 			actualMetricValue = metricValue
 
-			h.logger.Debug("Gauge metric stored",
-				zap.String("metric", metricTitle),
-				zap.String("actualMetricValue", actualMetricValue))
+			h.logger.Debug(fmt.Sprintf("Gauge metric stored. Metric: %v, actualMetricValue: %v", metricTitle, actualMetricValue))
 		}
 
 		if metricType == "counter" {
@@ -53,16 +50,14 @@ func (h *Handler) UpdateMetric() http.HandlerFunc {
 
 			err = h.storage.StoreCounter(metricTitle, int64(intValue))
 			if err != nil {
-				h.logger.Error("Cant store counter metric", zap.Error(errors.Unwrap(err)))
+				h.logger.Error("Cant store counter metric", errors.Unwrap(err))
 				http.Error(w, "Something went wrong", http.StatusInternalServerError)
 			}
 
 			counterVal, _ := h.storage.GetCounter(metricTitle)
 			actualMetricValue = strconv.Itoa(int(counterVal))
 
-			h.logger.Debug("Counter metric stored",
-				zap.String("metric", metricTitle),
-				zap.String("actualMetricValue", actualMetricValue))
+			h.logger.Debug(fmt.Sprintf("Counter metric stored. Metric: %v, actualMetricValue: %v", metricTitle, actualMetricValue))
 		}
 
 		if badRequestFlag {
@@ -77,7 +72,7 @@ func (h *Handler) UpdateMetric() http.HandlerFunc {
 
 			_, err := fmt.Fprint(w, actualMetricValue)
 			if err != nil {
-				h.logger.Error("UpdateMetric handler response writer", zap.Error(err))
+				h.logger.Error("UpdateMetric handler response writer", err)
 			}
 		}
 	}

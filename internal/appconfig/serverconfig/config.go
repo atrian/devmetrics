@@ -5,7 +5,8 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v6"
-	"go.uber.org/zap"
+
+	"github.com/atrian/devmetrics/pkg/logger"
 )
 
 var (
@@ -20,7 +21,7 @@ var (
 type Config struct {
 	Server ServerConfig
 	HTTP   HTTPConfig
-	logger *zap.Logger
+	logger logger.Logger
 }
 
 type ServerConfig struct {
@@ -39,15 +40,15 @@ type HTTPConfig struct {
 	ContentType string
 }
 
-func NewServerConfig(logger *zap.Logger) *Config {
-	config := Config{
+func NewServerConfig(logger logger.Logger) *Config {
+	conf := Config{
 		logger: logger,
 	}
-	config.loadServerConfig()
-	config.loadHTTPConfig()
-	config.loadServerFlags()
-	config.loadServerEnvConfiguration()
-	return &config
+	conf.loadServerConfig()
+	conf.loadHTTPConfig()
+	conf.loadServerFlags()
+	conf.loadServerEnvConfiguration()
+	return &conf
 }
 
 func (config *Config) loadServerConfig() {
@@ -73,12 +74,12 @@ func (config *Config) loadServerEnvConfiguration() {
 
 	err := env.Parse(&config.HTTP)
 	if err != nil {
-		config.logger.Fatal("loadServerEnvConfiguration env.Parse config.HTTP", zap.Error(err))
+		config.logger.Fatal("loadServerEnvConfiguration env.Parse config.HTTP", err)
 	}
 
 	err = env.Parse(&config.Server)
 	if err != nil {
-		config.logger.Fatal("loadServerEnvConfiguration env.Parse config.Server", zap.Error(err))
+		config.logger.Fatal("loadServerEnvConfiguration env.Parse config.Server", err)
 	}
 }
 

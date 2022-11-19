@@ -1,58 +1,58 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"net/http"
-
-	"go.uber.org/zap"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"github.com/atrian/devmetrics/internal/server/handlers"
 	"github.com/atrian/devmetrics/internal/server/router"
 	"github.com/atrian/devmetrics/internal/server/storage"
+	"github.com/atrian/devmetrics/pkg/logger"
 )
 
 type Server struct {
 	config  *serverconfig.Config
 	storage storage.Repository
-	logger  *zap.Logger
+	logger  logger.Logger
 }
 
 func NewServer() *Server {
 	// подключаем логгер
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		log.Fatal("Logger init error")
-	}
-	defer logger.Sync()
+	serverLogger := logger.NewZapLogger()
+	defer serverLogger.Sync()
 
 	// подключаем конфиги
-	config := serverconfig.NewServerConfig(logger)
+	config := serverconfig.NewServerConfig(serverLogger)
 
 	// подключаем storage
 	var appStorage storage.Repository
+
 	if config.Server.DBDSN == "" {
-		logger.Info("Loading memory storage")
-		appStorage = storage.NewMemoryStorage(config, logger)
+		serverLogger.Info("Loading memory storage")
+		appStorage = storage.NewMemoryStorage(config, serverLogger)
 	} else {
-		logger.Info("Loading PGSQL storage")
-		appStorage, err = storage.NewPgSQLStorage(config, logger)
+		serverLogger.Info("Loading PGSQL storage")
+		var err error
+		appStorage, err = storage.NewPgSQLStorage(config, serverLogger)
 		if err != nil {
-			logger.Error("Loading PGSQL storage", zap.Error(err))
+			serverLogger.Error("Loading PGSQL storage", err)
 		}
 	}
 
 	server := Server{
 		config:  config,
 		storage: appStorage,
-		logger:  logger,
+		logger:  serverLogger,
 	}
 
 	return &server
 }
 
 func (s *Server) Run() {
-	s.logger.Info("Starting server", zap.String("address", s.config.HTTP.Address))
+
+	s.logger.Info(fmt.Sprintf("Starting server @ %v", s.config.HTTP.Address))
 	defer s.Stop()
 
 	routes := router.New(handlers.New(s.config, s.storage, s.logger))
