@@ -2,11 +2,11 @@ package agent
 
 import (
 	"fmt"
-	"github.com/shirou/gopsutil/v3/cpu"
 	"math/rand"
 	"runtime"
 	"sync"
 
+	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 
 	"github.com/atrian/devmetrics/internal/dto"

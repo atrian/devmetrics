@@ -1,12 +1,11 @@
 package agent
 
 import (
-	"log"
+	"fmt"
 	"time"
 
-	"go.uber.org/zap"
-
 	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
+	"github.com/atrian/devmetrics/pkg/logger"
 )
 
 type (
@@ -17,15 +16,16 @@ type (
 type Agent struct {
 	config  *agentconfig.Config
 	metrics *MetricsDics
-	logger  *zap.Logger
+	logger  logger.Logger
 }
 
 func (a *Agent) Run() {
-	a.logger.Info("Agent started",
-		zap.Duration("PollInterval", a.config.Agent.PollInterval),
-		zap.Duration("ReportInterval", a.config.Agent.ReportInterval),
-		zap.String("Server address", a.config.HTTP.Address),
-	)
+
+	a.logger.Info(
+		fmt.Sprintf("Agent started. PollInterval: %v, ReportInterval: %v, Server address: %v",
+			a.config.Agent.PollInterval,
+			a.config.Agent.ReportInterval,
+			a.config.HTTP.Address))
 
 	// запускаем тикер сбора статистики
 	refreshStatsTicker := time.NewTicker(a.config.Agent.PollInterval)
@@ -37,34 +37,33 @@ func (a *Agent) Run() {
 	for {
 		select {
 		case refreshTime := <-refreshStatsTicker.C:
-			a.logger.Debug("Runtime metrics refresh", zap.Time("time", refreshTime))
-			a.RefreshStats()
+			a.logger.Debug(fmt.Sprintf("Metrics refresh. Time: %v", refreshTime))
+			go a.RefreshStats()
 		case uploadTime := <-uploadStatsTicker.C:
-			a.logger.Debug("Metrics upload", zap.Time("time", uploadTime))
-			a.UploadStats()
+			a.logger.Debug(fmt.Sprintf("Metrics upload. Time: %v", uploadTime))
+			go a.UploadStats()
 		}
 	}
 }
 
 func NewAgent() *Agent {
 	// подключаем логгер
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		log.Fatal("Logger init error")
-	}
-	defer logger.Sync()
+	agentLogger := logger.NewZapLogger()
+	defer agentLogger.Sync()
 
 	agent := &Agent{
-		config:  agentconfig.NewConfig(logger),
+		config:  agentconfig.NewConfig(agentLogger),
 		metrics: NewMetricsDicts(),
-		logger:  logger,
+		logger:  agentLogger,
 	}
 	return agent
 }
 
 func (a *Agent) RefreshStats() {
 	a.metrics.updateMetrics()
-	a.logger.Info("Runtime stats updated", zap.Int64("PollCount", int64(a.metrics.CounterDict["PollCount"].value)))
+
+	a.logger.Info(fmt.Sprintf("Runtime stats updated. PollCount: %v",
+		int64(a.metrics.CounterDict["PollCount"].value)))
 }
 
 func (a *Agent) UploadStats() {
