@@ -38,7 +38,8 @@ func (a *Agent) Run() {
 		select {
 		case refreshTime := <-refreshStatsTicker.C:
 			a.logger.Debug(fmt.Sprintf("Metrics refresh. Time: %v", refreshTime))
-			go a.RefreshStats()
+			go a.RefreshRuntimeStats()
+			go a.RefreshGopsStats()
 		case uploadTime := <-uploadStatsTicker.C:
 			a.logger.Debug(fmt.Sprintf("Metrics upload. Time: %v", uploadTime))
 			go a.UploadStats()
@@ -53,16 +54,23 @@ func NewAgent() *Agent {
 
 	agent := &Agent{
 		config:  agentconfig.NewConfig(agentLogger),
-		metrics: NewMetricsDicts(),
+		metrics: NewMetricsDicts(agentLogger),
 		logger:  agentLogger,
 	}
 	return agent
 }
 
-func (a *Agent) RefreshStats() {
-	a.metrics.updateMetrics()
+func (a *Agent) RefreshRuntimeStats() {
+	a.metrics.updateRuntimeMetrics()
 
 	a.logger.Info(fmt.Sprintf("Runtime stats updated. PollCount: %v",
+		int64(a.metrics.CounterDict["PollCount"].value)))
+}
+
+func (a *Agent) RefreshGopsStats() {
+	a.metrics.updateGopsMetrics()
+
+	a.logger.Info(fmt.Sprintf("Gops stats updated. PollCount: %v",
 		int64(a.metrics.CounterDict["PollCount"].value)))
 }
 

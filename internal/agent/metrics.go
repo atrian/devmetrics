@@ -10,11 +10,19 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 
 	"github.com/atrian/devmetrics/internal/dto"
+	"github.com/atrian/devmetrics/pkg/logger"
+)
+
+const (
+	RUNTIME_METRIC = iota
+	GOPS_METRIC
+	CPU_METRIC
 )
 
 type MetricsDics struct {
 	GaugeDict   map[string]*GaugeMetric
 	CounterDict map[string]*CounterMetric
+	logger      logger.Logger
 	mu          sync.RWMutex
 }
 
@@ -25,7 +33,7 @@ type StatsHolder struct {
 	mu             sync.RWMutex
 }
 
-func NewMetricHolder() *StatsHolder {
+func NewStatsHolder() *StatsHolder {
 	sh := StatsHolder{}
 	sh.updateGopsMemStat()
 	sh.updateRuntimeStat()
@@ -48,6 +56,7 @@ func (sh *StatsHolder) updateGopsMemStat() {
 }
 
 type GaugeMetric struct {
+	source    int
 	value     gauge
 	pullValue func(sh *StatsHolder) gauge
 }
@@ -65,7 +74,7 @@ func (c *CounterMetric) getCounterValue() int64 {
 	return int64(c.value)
 }
 
-func NewMetricsDicts() *MetricsDics {
+func NewMetricsDicts(logger logger.Logger) *MetricsDics {
 	dict := MetricsDics{
 		GaugeDict: map[string]*GaugeMetric{
 			"Alloc": {pullValue: func(sh *StatsHolder) gauge {
@@ -154,53 +163,79 @@ func NewMetricsDicts() *MetricsDics {
 			}},
 			"TotalMemory": {pullValue: func(sh *StatsHolder) gauge {
 				return gauge(sh.GopsMemStat.Total)
-			}},
+			}, source: GOPS_METRIC},
 			"FreeMemory": {pullValue: func(sh *StatsHolder) gauge {
 				return gauge(sh.GopsMemStat.Free)
-			}},
+			}, source: GOPS_METRIC},
 		},
 		CounterDict: map[string]*CounterMetric{
 			"PollCount": {calculateNextValue: func(c *CounterMetric) counter {
 				nextVal := c.value + 1
-				return counter(nextVal)
+				return nextVal
 			}},
 		},
+		logger: logger,
 	}
 
 	return &dict
 }
 
-func (md *MetricsDics) updateMetrics() {
-
+func (md *MetricsDics) updateRuntimeMetrics() {
 	md.mu.Lock()         // блокируем mutex
 	defer md.mu.Unlock() // разблокируем после обновления всех метрик
 
-	// получаем данные мониторинга
-	statsHolder := NewMetricHolder()
-
-	// обновляем данные мониторинга по списку, обновляем счетчики
-	for _, metric := range md.GaugeDict {
-		metric.value = metric.pullValue(statsHolder)
-	}
-	for _, ct := range md.CounterDict {
-		ct.value = ct.calculateNextValue(ct)
-	}
+	md.update(RUNTIME_METRIC)
 }
 
-func (md *MetricsDics) getCPUsStats() map[string]gauge {
-	cpus := make(map[string]gauge)
+func (md *MetricsDics) updateGopsMetrics() {
+	md.mu.Lock()         // блокируем mutex
+	defer md.mu.Unlock() // разблокируем после обновления всех метрик
 
+	md.updateCPUMetrics() // обновляем метрики CPU
+	md.update(GOPS_METRIC)
+}
+
+func (md *MetricsDics) updateCPUMetrics() {
 	cpuStats, err := cpu.Percent(0, true)
 	if err != nil {
-		// TODO добавить логгер
+		md.logger.Error("getCPUsStats cpu.Percent error", err)
 	}
 
 	for core, cpuPercent := range cpuStats {
 		metricName := fmt.Sprintf("CPUutilization%v", core)
-		cpus[metricName] = gauge(cpuPercent)
+		md.GaugeDict[metricName] = &GaugeMetric{
+			source: CPU_METRIC,
+			value:  gauge(cpuPercent),
+			pullValue: func(sh *StatsHolder) gauge {
+				return gauge(0)
+			},
+		}
+	}
+}
+
+func (md *MetricsDics) update(metricType int) {
+	// получаем данные мониторинга
+	statsHolder := NewStatsHolder()
+
+	// обновляем данные мониторинга по списку с учетом источника
+	for _, metric := range md.GaugeDict {
+		switch metricType {
+		case RUNTIME_METRIC:
+			if metric.source != RUNTIME_METRIC {
+				continue
+			}
+			metric.value = metric.pullValue(statsHolder)
+		case GOPS_METRIC:
+			if metric.source != GOPS_METRIC {
+				continue
+			}
+			metric.value = metric.pullValue(statsHolder)
+		}
 	}
 
-	return cpus
+	for _, ct := range md.CounterDict {
+		ct.value = ct.calculateNextValue(ct)
+	}
 }
 
 // exportMetrics возвращает слайс DTO с подписанными метриками
@@ -219,19 +254,6 @@ func (md *MetricsDics) exportMetrics(sign func(metricType, id string, delta *int
 			Delta: nil,
 			Value: &gaugeValue,
 			Hash:  sign("gauge", key, nil, &gaugeValue),
-		})
-	}
-
-	// выгружаем метрики CPU
-	cpus := md.getCPUsStats()
-	for key, value := range cpus {
-		cpuUsage := float64(value)
-		exportedData = append(exportedData, dto.Metrics{
-			ID:    key,
-			MType: "gauge",
-			Delta: nil,
-			Value: &cpuUsage,
-			Hash:  sign("gauge", key, nil, &cpuUsage),
 		})
 	}
 
