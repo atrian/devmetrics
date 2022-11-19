@@ -3,6 +3,7 @@ package agent
 import (
 	"math/rand"
 	"runtime"
+	"sync"
 
 	"github.com/atrian/devmetrics/internal/dto"
 )
@@ -10,6 +11,7 @@ import (
 type MetricsDics struct {
 	GaugeDict   map[string]*GaugeMetric
 	CounterDict map[string]*CounterMetric
+	mu          sync.RWMutex
 }
 
 type GaugeMetric struct {
@@ -130,6 +132,9 @@ func NewMetricsDicts() *MetricsDics {
 }
 
 func (md *MetricsDics) updateMetrics() {
+	md.mu.Lock()         // блокируем mutex
+	defer md.mu.Unlock() // разблокируем после обновления всех метрик
+
 	// получаем данные мониторинга
 	runtimeStats := runtime.MemStats{}
 	runtime.ReadMemStats(&runtimeStats)
@@ -145,6 +150,9 @@ func (md *MetricsDics) updateMetrics() {
 
 // exportMetrics возвращает слайс DTO с подписанными метриками
 func (md *MetricsDics) exportMetrics(sign func(metricType, id string, delta *int64, value *float64) string) *[]dto.Metrics {
+	md.mu.RLock()         // берем mutex в режиме чтения
+	defer md.mu.RUnlock() // разблокируем после выполнения
+
 	exportedData := make([]dto.Metrics, 0, len(md.GaugeDict)+len(md.CounterDict))
 
 	for key, metric := range md.GaugeDict {
