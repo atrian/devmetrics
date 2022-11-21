@@ -7,21 +7,20 @@ import (
 	"fmt"
 	"net/http"
 
-	"go.uber.org/zap"
-
 	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
 	"github.com/atrian/devmetrics/internal/crypto"
 	"github.com/atrian/devmetrics/internal/dto"
+	"github.com/atrian/devmetrics/pkg/logger"
 )
 
 type Uploader struct {
 	client *http.Client
 	config *agentconfig.Config
 	hasher crypto.Hasher
-	logger *zap.Logger
+	logger logger.Logger
 }
 
-func NewUploader(config *agentconfig.Config, logger *zap.Logger) *Uploader {
+func NewUploader(config *agentconfig.Config, logger logger.Logger) *Uploader {
 	uploader := Uploader{
 		client: &http.Client{},
 		config: config,
@@ -44,7 +43,7 @@ func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 		})
 
 		if err != nil {
-			uploader.logger.Error("SendStat json.Marshal", zap.Error(err))
+			uploader.logger.Error("SendStat json.Marshal", err)
 			continue
 		}
 
@@ -62,7 +61,7 @@ func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 		})
 
 		if err != nil {
-			uploader.logger.Error("SendStat json.Marshal", zap.Error(err))
+			uploader.logger.Error("SendStat json.Marshal", err)
 			continue
 		}
 
@@ -90,7 +89,7 @@ func (uploader *Uploader) SendAllStats(metrics *MetricsDics) {
 	jsonMetrics, err := json.Marshal(exportedMetrics)
 
 	if err != nil {
-		uploader.logger.Error("SendAllStats json.Marshal", zap.Error(err))
+		uploader.logger.Error("SendAllStats json.Marshal", err)
 		return
 	}
 
@@ -104,7 +103,7 @@ func (uploader *Uploader) sendRequest(body []byte) {
 
 	request, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(body))
 	if err != nil {
-		uploader.logger.Error("sendRequest NewRequest", zap.Error(err))
+		uploader.logger.Error("sendRequest NewRequest", err)
 	}
 
 	// устанавливаем заголовки
@@ -112,7 +111,7 @@ func (uploader *Uploader) sendRequest(body []byte) {
 
 	resp, err := uploader.client.Do(request)
 	if err != nil {
-		uploader.logger.Error("sendRequest client.Do", zap.Error(err))
+		uploader.logger.Error("sendRequest client.Do", err)
 	}
 
 	if resp != nil {
@@ -131,19 +130,19 @@ func (uploader *Uploader) sendGzippedRequest(body []byte) {
 
 	gzipWriter := gzip.NewWriter(&gzBody)
 	if _, err := gzipWriter.Write(body); err != nil {
-		uploader.logger.Error("sendGzippedRequest gzipWriter.Write", zap.Error(err))
+		uploader.logger.Error("sendGzippedRequest gzipWriter.Write", err)
 		return
 	}
 	err := gzipWriter.Close()
 	if err != nil {
-		uploader.logger.Error("sendGzippedRequest gzipWriter.Close", zap.Error(err))
+		uploader.logger.Error("sendGzippedRequest gzipWriter.Close", err)
 		return
 	}
 
 	// собираем request
 	request, err := http.NewRequest(http.MethodPost, endpoint, &gzBody)
 	if err != nil {
-		uploader.logger.Error("sendGzippedRequest http.NewRequest", zap.Error(err))
+		uploader.logger.Error("sendGzippedRequest http.NewRequest", err)
 	}
 
 	// устанавливаем заголовки
@@ -152,7 +151,7 @@ func (uploader *Uploader) sendGzippedRequest(body []byte) {
 
 	resp, err := uploader.client.Do(request)
 	if err != nil {
-		uploader.logger.Error("sendGzippedRequest client.Do", zap.Error(err))
+		uploader.logger.Error("sendGzippedRequest client.Do", err)
 	}
 
 	if resp != nil {

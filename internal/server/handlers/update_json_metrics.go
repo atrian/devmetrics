@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"strings"
 
-	"go.uber.org/zap"
-
 	"github.com/atrian/devmetrics/internal/dto"
 )
 
@@ -22,7 +20,7 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 
 		metrics, err := h.unmarshallMetrics(r)
 		if err != nil {
-			h.logger.Error("UpdateJSONMetrics cant unmarshallMetric", zap.Error(err))
+			h.logger.Error("UpdateJSONMetrics cant unmarshallMetric", err)
 			http.Error(w, "Bad JSON", http.StatusBadRequest)
 		}
 		verifiedMetrics := make([]dto.Metrics, 0, len(metrics))
@@ -136,7 +134,7 @@ func (h *Handler) unmarshallMetrics(r *http.Request) ([]dto.Metrics, error) {
 func (h *Handler) decodeGzipBody(gzipR io.Reader) io.Reader {
 	gz, err := gzip.NewReader(gzipR)
 	if err != nil {
-		h.logger.Error("decodeGzipBody cant set up gzip decoder", zap.Error(err))
+		h.logger.Error("decodeGzipBody cant set up gzip decoder", err)
 	}
 	return gz
 }

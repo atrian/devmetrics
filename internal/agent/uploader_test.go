@@ -5,9 +5,8 @@ import (
 	"net/http"
 	"testing"
 
-	"go.uber.org/zap"
-
 	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
+	"github.com/atrian/devmetrics/pkg/logger"
 )
 
 func TestUploader_buildStatUploadURL(t *testing.T) {
@@ -21,8 +20,8 @@ func TestUploader_buildStatUploadURL(t *testing.T) {
 		metricValue string
 	}
 
-	logger, _ := zap.NewDevelopment()
-	config := agentconfig.NewConfig(logger)
+	agentLogger := logger.NewZapLogger()
+	config := agentconfig.NewConfig(agentLogger)
 
 	tests := []struct {
 		name   string

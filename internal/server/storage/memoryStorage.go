@@ -2,25 +2,25 @@ package storage
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"github.com/atrian/devmetrics/internal/dto"
-	"go.uber.org/zap"
+	"github.com/atrian/devmetrics/pkg/logger"
 )
 
 type MemoryStorage struct {
 	metrics     *MetricsDicts
 	config      *serverconfig.Config
-	logger      *zap.Logger
+	logger      logger.Logger
 	silentStore bool
 }
 
-// Проверка имплементации интерфейса. Как это работает?
 var _ Repository = (*MemoryStorage)(nil)
 
-func NewMemoryStorage(config *serverconfig.Config, logger *zap.Logger) *MemoryStorage {
+func NewMemoryStorage(config *serverconfig.Config, logger logger.Logger) *MemoryStorage {
 	storage := MemoryStorage{
 		metrics: NewMetricsDicts(),
 		config:  config,
@@ -34,7 +34,7 @@ func (s *MemoryStorage) StoreGauge(name string, value float64) error {
 	if !s.silentStore {
 		err := s.syncWithFileOnUpdate()
 		if err != nil {
-			s.logger.Error("StoreGauge syncWithFileOnUpdate", zap.Error(err))
+			s.logger.Error("StoreGauge syncWithFileOnUpdate", err)
 			return err
 		}
 	}
@@ -51,7 +51,7 @@ func (s *MemoryStorage) StoreCounter(name string, value int64) error {
 	if !s.silentStore {
 		err := s.syncWithFileOnUpdate()
 		if err != nil {
-			s.logger.Error("StoreCounter syncWithFileOnUpdate", zap.Error(err))
+			s.logger.Error("StoreCounter syncWithFileOnUpdate", err)
 			return err
 		}
 	}
@@ -79,7 +79,7 @@ func (s *MemoryStorage) DumpToFile(filename string) error {
 
 	metricWriter, err := NewMetricWriter(filename)
 	if err != nil {
-		s.logger.Error("NewMetricWriter error", zap.Error(err))
+		s.logger.Error("NewMetricWriter error", err)
 	}
 
 	defer metricWriter.Close()
@@ -112,7 +112,7 @@ func (s *MemoryStorage) DumpToFile(filename string) error {
 
 	// пишем все метрики в JSON
 	if err := metricWriter.WriteMetric(&metricsDTO); err != nil {
-		s.logger.Error("WriteMetric error", zap.Error(err))
+		s.logger.Error("WriteMetric error", err)
 		return err
 	}
 
@@ -125,7 +125,8 @@ func (s *MemoryStorage) RestoreFromFile(filename string) error {
 
 	file, err := os.OpenFile(filename, os.O_RDONLY|os.O_CREATE, 0777)
 	if err != nil {
-		s.logger.Warn("RestoreFromFile can't load file", zap.Error(err))
+		s.logger.Warning("RestoreFromFile can't load file")
+		return err
 	}
 
 	var metrics []dto.Metrics
@@ -133,7 +134,8 @@ func (s *MemoryStorage) RestoreFromFile(filename string) error {
 
 	err = decoder.Decode(&metrics)
 	if err != nil {
-		s.logger.Warn("Can't Decode metrics", zap.Error(err))
+		s.logger.Warning("Can't Decode metrics")
+		return err
 	}
 
 	s.SetMetrics(metrics)
@@ -147,9 +149,15 @@ func (s *MemoryStorage) SetMetrics(metrics []dto.Metrics) {
 		_ = key
 		switch metricCandidate.MType {
 		case "gauge":
-			s.StoreGauge(metricCandidate.ID, *metricCandidate.Value)
+			err := s.StoreGauge(metricCandidate.ID, *metricCandidate.Value)
+			if err != nil {
+				s.logger.Error("SetMetrics StoreGauge error", err)
+			}
 		case "counter":
-			s.StoreCounter(metricCandidate.ID, *metricCandidate.Delta)
+			err := s.StoreCounter(metricCandidate.ID, *metricCandidate.Delta)
+			if err != nil {
+				s.logger.Error("SetMetrics StoreCounter error", err)
+			}
 		default:
 		}
 	}
@@ -161,7 +169,7 @@ func (s *MemoryStorage) syncWithFileOnUpdate() error {
 	if s.config.Server.StoreInterval == 0 {
 		err := s.DumpToFile(s.config.Server.StoreFile)
 		if err != nil {
-			s.logger.Error("syncWithFileOnUpdate", zap.Error(err))
+			s.logger.Error("syncWithFileOnUpdate", err)
 			return err
 		}
 	}
@@ -175,7 +183,7 @@ func (s *MemoryStorage) RunOnStart() {
 	if s.config.Server.Restore {
 		err := s.RestoreFromFile(s.config.Server.StoreFile)
 		if err != nil {
-			s.logger.Error("RunOnStart - RestoreFromFile call", zap.Error(err))
+			s.logger.Error("RunOnStart - RestoreFromFile call", err)
 		}
 	}
 
@@ -192,7 +200,7 @@ func (s *MemoryStorage) RunOnClose() {
 	s.logger.Info("Dump metrics to file before shutdown")
 	err := s.DumpToFile(s.config.Server.StoreFile)
 	if err != nil {
-		s.logger.Error("RunOnClose DumpToFile", zap.Error(err))
+		s.logger.Error("RunOnClose DumpToFile", err)
 	}
 }
 
@@ -201,16 +209,16 @@ func (s *MemoryStorage) runMetricsDumpTicker() {
 	// запускаем тикер дампа статистики
 	dumpMetricsTicker := time.NewTicker(s.config.Server.StoreInterval)
 
-	s.logger.Info("Run metrics dump", zap.Duration("StoreInterval", s.config.Server.StoreInterval))
+	s.logger.Info(fmt.Sprintf("Run metrics dump. StoreInterval: %v", s.config.Server.StoreInterval))
 
 	go func() {
 		for dumpTime := range dumpMetricsTicker.C {
 			err := s.DumpToFile(s.config.Server.StoreFile)
 			if err != nil {
-				s.logger.Error("DumpToFile go func", zap.Error(err))
+				s.logger.Error("DumpToFile go func", err)
 			}
 
-			s.logger.Info("Metrics dump time", zap.Time("dumpTime", dumpTime))
+			s.logger.Info(fmt.Sprintf("Metrics dump time. dumpTime: %v", dumpTime))
 		}
 	}()
 }

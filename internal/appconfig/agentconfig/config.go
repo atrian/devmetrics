@@ -5,7 +5,8 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v6"
-	"go.uber.org/zap"
+
+	"github.com/atrian/devmetrics/pkg/logger"
 )
 
 var (
@@ -17,7 +18,7 @@ var (
 type Config struct {
 	Agent  AgentConfig
 	HTTP   HTTPConfig
-	logger *zap.Logger
+	logger logger.Logger
 }
 
 type AgentConfig struct {
@@ -33,7 +34,7 @@ type HTTPConfig struct {
 	ContentType string
 }
 
-func NewConfig(logger *zap.Logger) *Config {
+func NewConfig(logger logger.Logger) *Config {
 	config := Config{
 		logger: logger,
 	}
@@ -78,11 +79,11 @@ func (config *Config) loadAgentEnvConfiguration() {
 
 	err := env.Parse(&config.HTTP)
 	if err != nil {
-		config.logger.Fatal("loadAgentEnvConfiguration env.Parse config.HTTP", zap.Error(err))
+		config.logger.Fatal("loadAgentEnvConfiguration env.Parse config.HTTP", err)
 	}
 
 	err = env.Parse(&config.Agent)
 	if err != nil {
-		config.logger.Fatal("loadAgentEnvConfiguration env.Parse config.Agent", zap.Error(err))
+		config.logger.Fatal("loadAgentEnvConfiguration env.Parse config.Agent", err)
 	}
 }
