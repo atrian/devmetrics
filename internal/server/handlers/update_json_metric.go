@@ -53,6 +53,7 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 	}
 }
 
+// unmarshallMetric анмаршаллинг метрики в dto.Metrics
 func (h *Handler) unmarshallMetric(body io.ReadCloser) (*dto.Metrics, error) {
 	var metric dto.Metrics
 	decoder := json.NewDecoder(body)

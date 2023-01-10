@@ -111,6 +111,7 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 	}
 }
 
+// unmarshallMetrics анмаршаллинг метрик в слайс dto.Metrics
 func (h *Handler) unmarshallMetrics(r *http.Request) ([]dto.Metrics, error) {
 	var body io.Reader
 
@@ -131,6 +132,7 @@ func (h *Handler) unmarshallMetrics(r *http.Request) ([]dto.Metrics, error) {
 	return metrics, nil
 }
 
+// decodeGzipBody распаковка GZIP тела запроса
 func (h *Handler) decodeGzipBody(gzipR io.Reader) io.Reader {
 	gz, err := gzip.NewReader(gzipR)
 	if err != nil {

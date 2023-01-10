@@ -14,8 +14,8 @@ import (
 type HandlersTestSuite struct {
 	suite.Suite
 	config  *serverconfig.Config
-	storage Repository
-	logger  logger.Logger
+	storage IRepository
+	logger  logger.ILogger
 }
 
 func (suite *HandlersTestSuite) SetupSuite() {

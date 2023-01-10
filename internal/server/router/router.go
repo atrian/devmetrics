@@ -19,6 +19,7 @@ func registerMiddlewares(router *Router) {
 	router.Mux.Use(middlewares.GzipHandle)
 }
 
+// registerRoutes регистрация всех маршрутов бизнес логики приложения
 func registerRoutes(router *Router, handler *handlers.Handler) {
 	// По запросу GET http://<АДРЕС_СЕРВЕРА>/ сервер должен отдавать HTML-страничку со списком имён
 	// и значений всех известных ему на текущий момент метрик.
@@ -46,6 +47,7 @@ func registerRoutes(router *Router, handler *handlers.Handler) {
 	router.Post("/updates/", handler.UpdateJSONMetrics())
 }
 
+// New возвращает подготовленный роутер со всеми зарегистрированными маршрутами и посредниками
 func New(handler *handlers.Handler) *Router {
 	router := Router{
 		Mux: chi.NewMux(),

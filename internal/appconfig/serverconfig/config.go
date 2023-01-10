@@ -19,30 +19,33 @@ var (
 	profile       *bool
 )
 
+// Config конфигурация сервера приема метрик
 type Config struct {
 	Server ServerConfig
 	HTTP   HTTPConfig
-	logger logger.Logger
+	logger logger.ILogger
 }
 
+// ServerConfig основная конфигурация сервера для хранения метрик
 type ServerConfig struct {
-	StoreInterval      time.Duration `env:"STORE_INTERVAL"`
-	StoreFile          string        `env:"STORE_FILE"`
-	Restore            bool          `env:"RESTORE"`
-	MetricTemplateFile string
-	HashKey            string `env:"KEY"`
-	DBDSN              string `env:"DATABASE_DSN"`
-	ProfileApp         bool
+	StoreInterval      time.Duration `env:"STORE_INTERVAL"` // StoreInterval интервал сохранения накопленных метрик в файл на диске, по умолчанию раз в 5 минут
+	StoreFile          string        `env:"STORE_FILE"`     // StoreFile файл для сохранения накопленных метрик на диске
+	Restore            bool          `env:"RESTORE"`        // Restore флаг периодического сброса накопленных метрик в файл на диск
+	MetricTemplateFile string        // MetricTemplateFile шаблон вывода метрик в HTML формате
+	HashKey            string        `env:"KEY"`          // HashKey ключ для проверки подписи метрик
+	DBDSN              string        `env:"DATABASE_DSN"` // DBDSN строка соединения с базой данных (PGSQL)
+	ProfileApp         bool          // ProfileApp флаг разрешающий маршруты для просмотра профиля pprof приложения
 }
 
+// HTTPConfig конфигурация старта веб сервера для приема запросов
 type HTTPConfig struct {
-	Protocol    string
-	Address     string `env:"ADDRESS"`
-	URLTemplate string
-	ContentType string
+	Address     string `env:"ADDRESS"` // Address адрес сервера
+	ContentType string // ContentType устанавливается в заголовках ответа
 }
 
-func NewServerConfig(logger logger.Logger) *Config {
+// NewServerConfig собирает конфигурацию из значений по умолчанию, переданных флагов и переменных окружения
+// приоритет по возрастанию: умолчание > флаги > переменные среды
+func NewServerConfig(logger logger.ILogger) *Config {
 	conf := Config{
 		logger: logger,
 	}
@@ -64,9 +67,7 @@ func (config *Config) loadServerConfig() {
 
 func (config *Config) loadHTTPConfig() {
 	config.HTTP = HTTPConfig{
-		Protocol:    "http",
 		Address:     "127.0.0.1:8080",
-		URLTemplate: "%v://%v/",
 		ContentType: "application/json",
 	}
 }

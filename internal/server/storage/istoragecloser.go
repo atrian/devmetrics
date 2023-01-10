@@ -1,6 +1,7 @@
 package storage
 
-type Observer interface {
-	RunOnClose()
-	RunOnStart()
+// IObserver интерфейс запуска функций при старте и завершении работы с хранилищем
+type IObserver interface {
+	RunOnClose() // RunOnClose метод выполняется завершении работы с хранилищем (закрыте соединения, освобождение ресурса и тд.)
+	RunOnStart() // RunOnStart метод выполняется при старте работы (миграции и пр)
 }

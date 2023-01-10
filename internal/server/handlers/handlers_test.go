@@ -20,9 +20,9 @@ import (
 type HandlersTestSuite struct {
 	suite.Suite
 	config  *serverconfig.Config
-	storage storage.Repository
+	storage storage.IRepository
 	router  *router.Router
-	logger  logger.Logger
+	logger  logger.ILogger
 }
 
 func (suite *HandlersTestSuite) SetupSuite() {

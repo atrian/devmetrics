@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+// GetPing проверка соединения с базой данных
 func (h *Handler) GetPing() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// соединение с БД

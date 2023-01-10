@@ -7,12 +7,13 @@ type (
 	counter int64
 )
 
-type Repository interface {
-	StoreGauge(name string, value float64) error
-	GetGauge(name string) (float64, bool)
-	StoreCounter(name string, value int64) error
-	GetCounter(name string) (int64, bool)
-	GetMetrics() *MetricsDicts
-	SetMetrics(metrics []dto.Metrics)
-	Observer
+// IRepository интерфейс хранилища метрик на стороне сервера
+type IRepository interface {
+	StoreGauge(name string, value float64) error // StoreGauge запись метрики
+	GetGauge(name string) (float64, bool)        // GetGauge получение значения метрики по имени
+	StoreCounter(name string, value int64) error // StoreCounter запись счетчика
+	GetCounter(name string) (int64, bool)        // GetCounter получение значения счетчика по имени
+	GetMetrics() *MetricsDicts                   // GetMetrics получение всего справочника метрик MetricsDicts
+	SetMetrics(metrics []dto.Metrics)            // SetMetrics массовое сохранение метрик из слайса dto.Metrics
+	IObserver
 }

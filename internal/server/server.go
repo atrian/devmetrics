@@ -1,3 +1,7 @@
+// Package server - серверная часть приложения по сбору метрик.
+// Принимает метрики в JSON формате, сохраняет в In Memory или PostrgeSQL хранилище
+// Реализована проверка подписи метрик.
+// Подключено профилирование, см. конфигурацию serverconfig.ServerConfig
 package server
 
 import (
@@ -14,12 +18,18 @@ import (
 	"github.com/atrian/devmetrics/pkg/logger"
 )
 
+// Server основное приложение сервера.
+// Доступен профайлер при ProfileApp == true в serverconfig.ServerConfig
 type Server struct {
 	config  *serverconfig.Config
-	storage storage.Repository
-	logger  logger.Logger
+	storage storage.IRepository
+	logger  logger.ILogger
 }
 
+// NewServer возвращает указатель на Server сконфигурированный со всеми зависимостями:
+// logger - используется ZAP
+// storage - в зависимости от конфигурации, In Memory или PgSQL
+// config - собранынй серверный конфиг serverconfig.Config с учетом флагов и переменных окружения
 func NewServer() *Server {
 	// подключаем логгер
 	serverLogger := logger.NewZapLogger()
@@ -29,7 +39,7 @@ func NewServer() *Server {
 	config := serverconfig.NewServerConfig(serverLogger)
 
 	// подключаем storage
-	var appStorage storage.Repository
+	var appStorage storage.IRepository
 
 	if config.Server.DBDSN == "" {
 		serverLogger.Info("Loading memory storage")
@@ -52,6 +62,23 @@ func NewServer() *Server {
 	return &server
 }
 
+// Run запуск сервера по указанному адресу.
+// если параметр serverconfig.ServerConfig - ProfileApp == true
+// доступны хендлеры PPROF
+//
+//	r.HandleFunc("/pprof/*", pprof.Index)
+//	r.HandleFunc("/pprof/cmdline", pprof.Cmdline)
+//	r.HandleFunc("/pprof/profile", pprof.Profile)
+//	r.HandleFunc("/pprof/symbol", pprof.Symbol)
+//	r.HandleFunc("/pprof/trace", pprof.Trace)
+//	r.HandleFunc("/vars", expVars)
+//
+//	r.Handle("/pprof/goroutine", pprof.Handler("goroutine"))
+//	r.Handle("/pprof/threadcreate", pprof.Handler("threadcreate"))
+//	r.Handle("/pprof/mutex", pprof.Handler("mutex"))
+//	r.Handle("/pprof/heap", pprof.Handler("heap"))
+//	r.Handle("/pprof/block", pprof.Handler("block"))
+//	r.Handle("/pprof/allocs", pprof.Handler("allocs"))
 func (s *Server) Run() {
 
 	s.logger.Info(fmt.Sprintf("Starting server @ %v", s.config.HTTP.Address))
@@ -70,6 +97,7 @@ func (s *Server) Run() {
 	log.Fatal(http.ListenAndServe(s.config.HTTP.Address, routes))
 }
 
+// Stop остановка сервера, завершение работы с хранилищем
 func (s *Server) Stop() {
 	// выполняем процедуры остановки хранилища
 	s.storage.RunOnClose()
