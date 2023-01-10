@@ -1,8 +1,9 @@
 package storage
 
 import (
-	"github.com/atrian/devmetrics/pkg/logger"
 	"testing"
+
+	"github.com/atrian/devmetrics/pkg/logger"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
