@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/go-chi/chi/v5/middleware"
+
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"github.com/atrian/devmetrics/internal/server/handlers"
 	"github.com/atrian/devmetrics/internal/server/router"
@@ -56,6 +58,10 @@ func (s *Server) Run() {
 	defer s.Stop()
 
 	routes := router.New(handlers.New(s.config, s.storage, s.logger))
+	// Разрешаем роуты профайлера, если разрешено конфигурацией
+	if s.config.Server.ProfileApp {
+		routes.Mount("/debug", middleware.Profiler())
+	}
 
 	// выполняем стартовые процедуры для хранилища
 	s.storage.RunOnStart()

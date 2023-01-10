@@ -2,6 +2,9 @@ package agent
 
 import (
 	"fmt"
+	"net"
+	"net/http"
+	_ "net/http/pprof" // подключаем пакет pprof
 	"time"
 
 	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
@@ -34,17 +37,21 @@ func (a *Agent) Run() {
 	uploadStatsTicker := time.NewTicker(a.config.Agent.ReportInterval)
 
 	// получаем сигнал из тикеров и запускаем методы сбора и отправки
-	for {
-		select {
-		case refreshTime := <-refreshStatsTicker.C:
-			a.logger.Debug(fmt.Sprintf("Metrics refresh. Time: %v", refreshTime))
-			go a.RefreshRuntimeStats()
-			go a.RefreshGopsStats()
-		case uploadTime := <-uploadStatsTicker.C:
-			a.logger.Debug(fmt.Sprintf("Metrics upload. Time: %v", uploadTime))
-			go a.UploadStats()
+	go func() {
+		for {
+			select {
+			case refreshTime := <-refreshStatsTicker.C:
+				a.logger.Debug(fmt.Sprintf("Metrics refresh. Time: %v", refreshTime))
+				go a.RefreshRuntimeStats()
+				go a.RefreshGopsStats()
+			case uploadTime := <-uploadStatsTicker.C:
+				a.logger.Debug(fmt.Sprintf("Metrics upload. Time: %v", uploadTime))
+				go a.UploadStats()
+			}
 		}
-	}
+	}()
+
+	a.RunProfiler()
 }
 
 func NewAgent() *Agent {
@@ -58,6 +65,17 @@ func NewAgent() *Agent {
 		logger:  agentLogger,
 	}
 	return agent
+}
+
+func (a *Agent) RunProfiler() {
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		a.logger.Error("Can't create listener for PPROF server", err)
+	}
+
+	a.logger.Info(fmt.Sprintf("Profiler started @ %v", listener.Addr()))
+
+	http.Serve(listener, nil)
 }
 
 func (a *Agent) RefreshRuntimeStats() {

@@ -16,6 +16,7 @@ var (
 	dsn           *string
 	restore       *bool
 	storeInterval *time.Duration
+	profile       *bool
 )
 
 type Config struct {
@@ -31,6 +32,7 @@ type ServerConfig struct {
 	MetricTemplateFile string
 	HashKey            string `env:"KEY"`
 	DBDSN              string `env:"DATABASE_DSN"`
+	ProfileApp         bool
 }
 
 type HTTPConfig struct {
@@ -54,7 +56,7 @@ func NewServerConfig(logger logger.Logger) *Config {
 func (config *Config) loadServerConfig() {
 	config.Server = ServerConfig{
 		StoreInterval:      300 * time.Second,
-		StoreFile:          "/tmp/devops-metrics-db.json",
+		StoreFile:          "tmp/devops-metrics-db.json",
 		Restore:            true,
 		MetricTemplateFile: "internal/server/templates/metricTemplate.html",
 	}
@@ -85,11 +87,12 @@ func (config *Config) loadServerEnvConfiguration() {
 
 func (config *Config) loadServerFlags() {
 	address = flag.String("a", "127.0.0.1:8080", "Address and port used for server and agent.")
-	file = flag.String("f", "/tmp/devops-metrics-db.json", "Where to store metrics dump file.")
+	file = flag.String("f", "tmp/devops-metrics-db.json", "Where to store metrics dump file.")
 	restore = flag.Bool("r", true, "Restore metrics from dump file on server start.")
 	storeInterval = flag.Duration("i", 300*time.Second, "Metrics dump interval in seconds.")
 	hashKey = flag.String("k", "", "Key for metrics sign validation")
 	dsn = flag.String("d", "", "DSN for PostgreSQL server")
+	profile = flag.Bool("p", false, "Enable pprof profiler")
 
 	flag.Parse()
 
@@ -99,4 +102,5 @@ func (config *Config) loadServerFlags() {
 	config.Server.StoreInterval = *storeInterval
 	config.Server.HashKey = *hashKey
 	config.Server.DBDSN = *dsn
+	config.Server.ProfileApp = *profile
 }
