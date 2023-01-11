@@ -105,7 +105,7 @@ func TestHandlersTestSuite(t *testing.T) {
 	suite.Run(t, new(HandlersTestSuite))
 }
 
-// Ctrl-c Ctrl-v из учебника практикума.
+// testRequest вспомогательный метод для отправки запросов
 func testRequest(t *testing.T, ts *httptest.Server, method, path string) (int, string) {
 	req, err := http.NewRequest(method, ts.URL+path, nil)
 	require.NoError(t, err)
@@ -122,10 +122,10 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (int, s
 
 func ExampleHandler_UpdateMetric() {
 	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
-	log := logger.NewZapLogger()
-	conf := serverconfig.NewServerConfigWithoutFlags(log)
-	memStorage := storage.NewMemoryStorage(conf, log)
-	r := router.New(handlers.New(conf, memStorage, log))
+	appLogger := logger.NewZapLogger()
+	appConf := serverconfig.NewServerConfigWithoutFlags(appLogger)
+	memStorage := storage.NewMemoryStorage(appConf, appLogger)
+	r := router.New(handlers.New(appConf, memStorage, appLogger))
 
 	// Запускаем тестовый сервер
 	testServer := httptest.NewServer(r)
@@ -135,7 +135,10 @@ func ExampleHandler_UpdateMetric() {
 	endpoint := testServer.URL + "/update/counter/PollCount/3"
 
 	request, _ := http.NewRequest(http.MethodPost, endpoint, nil)
-	response, _ := http.DefaultClient.Do(request)
+	response, respErr := http.DefaultClient.Do(request)
+	if respErr != nil {
+		appLogger.Fatal("http.DefaultClient.Do error", respErr)
+	}
 	defer response.Body.Close()
 
 	responseBody, _ := io.ReadAll(response.Body)
@@ -153,10 +156,10 @@ func ExampleHandler_UpdateJSONMetrics() {
 	metricsReader := strings.NewReader(metricsInJSON)
 
 	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
-	log := logger.NewZapLogger()
-	conf := serverconfig.NewServerConfigWithoutFlags(log)
-	memStorage := storage.NewMemoryStorage(conf, log)
-	r := router.New(handlers.New(conf, memStorage, log))
+	appLogger := logger.NewZapLogger()
+	appConf := serverconfig.NewServerConfigWithoutFlags(appLogger)
+	memStorage := storage.NewMemoryStorage(appConf, appLogger)
+	r := router.New(handlers.New(appConf, memStorage, appLogger))
 
 	// Запускаем тестовый сервер
 	testServer := httptest.NewServer(r)
@@ -166,7 +169,10 @@ func ExampleHandler_UpdateJSONMetrics() {
 	endpoint := testServer.URL + "/updates/"
 
 	request, _ := http.NewRequest(http.MethodPost, endpoint, metricsReader)
-	response, _ := http.DefaultClient.Do(request)
+	response, respErr := http.DefaultClient.Do(request)
+	if respErr != nil {
+		appLogger.Fatal("http.DefaultClient.Do error", respErr)
+	}
 	defer response.Body.Close()
 
 	responseBody, _ := io.ReadAll(response.Body)
@@ -184,10 +190,10 @@ func ExampleHandler_GetJSONMetric() {
 	metricsReader := strings.NewReader(metricsInJSON)
 
 	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
-	log := logger.NewZapLogger()
-	conf := serverconfig.NewServerConfigWithoutFlags(log)
-	memStorage := storage.NewMemoryStorage(conf, log)
-	r := router.New(handlers.New(conf, memStorage, log))
+	appLogger := logger.NewZapLogger()
+	appConf := serverconfig.NewServerConfigWithoutFlags(appLogger)
+	memStorage := storage.NewMemoryStorage(appConf, appLogger)
+	r := router.New(handlers.New(appConf, memStorage, appLogger))
 
 	// Запускаем тестовый сервер
 	testServer := httptest.NewServer(r)
@@ -198,7 +204,10 @@ func ExampleHandler_GetJSONMetric() {
 	endpoint := testServer.URL + "/updates/"
 
 	request, _ := http.NewRequest(http.MethodPost, endpoint, metricsReader)
-	response, _ := http.DefaultClient.Do(request)
+	response, respErr := http.DefaultClient.Do(request)
+	if respErr != nil {
+		appLogger.Fatal("http.DefaultClient.Do error", respErr)
+	}
 	response.Body.Close()
 
 	// Делаем запрос нужной метрики
@@ -211,7 +220,10 @@ func ExampleHandler_GetJSONMetric() {
 
 	endpoint = testServer.URL + "/value/"
 	request, _ = http.NewRequest(http.MethodPost, endpoint, metricReader)
-	response, _ = http.DefaultClient.Do(request)
+	response, respErr = http.DefaultClient.Do(request)
+	if respErr != nil {
+		appLogger.Fatal("http.DefaultClient.Do error", respErr)
+	}
 	defer response.Body.Close()
 
 	responseBody, _ := io.ReadAll(response.Body)
@@ -229,10 +241,10 @@ func ExampleHandler_GetMetric() {
 	metricsReader := strings.NewReader(metricsInJSON)
 
 	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
-	log := logger.NewZapLogger()
-	conf := serverconfig.NewServerConfigWithoutFlags(log)
-	memStorage := storage.NewMemoryStorage(conf, log)
-	r := router.New(handlers.New(conf, memStorage, log))
+	appLogger := logger.NewZapLogger()
+	appConf := serverconfig.NewServerConfigWithoutFlags(appLogger)
+	memStorage := storage.NewMemoryStorage(appConf, appLogger)
+	r := router.New(handlers.New(appConf, memStorage, appLogger))
 
 	// Запускаем тестовый сервер
 	testServer := httptest.NewServer(r)
@@ -243,7 +255,10 @@ func ExampleHandler_GetMetric() {
 	endpoint := testServer.URL + "/updates/"
 
 	request, _ := http.NewRequest(http.MethodPost, endpoint, metricsReader)
-	response, _ := http.DefaultClient.Do(request)
+	response, respErr := http.DefaultClient.Do(request)
+	if respErr != nil {
+		appLogger.Fatal("http.DefaultClient.Do error", respErr)
+	}
 	response.Body.Close()
 
 	// Делаем запрос нужной метрики
@@ -255,7 +270,10 @@ func ExampleHandler_GetMetric() {
 
 	endpoint = testServer.URL + "/value/gauge/YourGauge"
 	request, _ = http.NewRequest(http.MethodGet, endpoint, metricReader)
-	response, _ = http.DefaultClient.Do(request)
+	response, respErr = http.DefaultClient.Do(request)
+	if respErr != nil {
+		appLogger.Fatal("http.DefaultClient.Do error", respErr)
+	}
 	defer response.Body.Close()
 
 	responseBody, _ := io.ReadAll(response.Body)
@@ -273,10 +291,10 @@ func ExampleHandler_UpdateJSONMetric() {
 	metricReader := strings.NewReader(metricInJSON)
 
 	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
-	log := logger.NewZapLogger()
-	conf := serverconfig.NewServerConfigWithoutFlags(log)
-	memStorage := storage.NewMemoryStorage(conf, log)
-	r := router.New(handlers.New(conf, memStorage, log))
+	appLogger := logger.NewZapLogger()
+	appConf := serverconfig.NewServerConfigWithoutFlags(appLogger)
+	memStorage := storage.NewMemoryStorage(appConf, appLogger)
+	r := router.New(handlers.New(appConf, memStorage, appLogger))
 
 	// Запускаем тестовый сервер
 	testServer := httptest.NewServer(r)
@@ -286,7 +304,10 @@ func ExampleHandler_UpdateJSONMetric() {
 	endpoint := testServer.URL + "/update/"
 
 	request, _ := http.NewRequest(http.MethodPost, endpoint, metricReader)
-	response, _ := http.DefaultClient.Do(request)
+	response, respErr := http.DefaultClient.Do(request)
+	if respErr != nil {
+		appLogger.Fatal("http.DefaultClient.Do error", respErr)
+	}
 	defer response.Body.Close()
 
 	responseBody, _ := io.ReadAll(response.Body)
