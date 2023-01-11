@@ -16,7 +16,7 @@ func ExampleMemoryStorage() {
 	)
 
 	l = logger.NewZapLogger()
-	c = serverconfig.NewServerConfig(l)
+	c = serverconfig.NewServerConfigWithoutFlags(l)
 	memStorage = storage.NewMemoryStorage(c, l)
 
 	err := memStorage.StoreCounter("YourCounter", int64(100500))

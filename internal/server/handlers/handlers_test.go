@@ -123,7 +123,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (int, s
 func ExampleHandler_UpdateMetric() {
 	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
 	log := logger.NewZapLogger()
-	conf := serverconfig.NewServerConfig(log)
+	conf := serverconfig.NewServerConfigWithoutFlags(log)
 	memStorage := storage.NewMemoryStorage(conf, log)
 	r := router.New(handlers.New(conf, memStorage, log))
 
@@ -154,7 +154,7 @@ func ExampleHandler_UpdateJSONMetrics() {
 
 	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
 	log := logger.NewZapLogger()
-	conf := serverconfig.NewServerConfig(log)
+	conf := serverconfig.NewServerConfigWithoutFlags(log)
 	memStorage := storage.NewMemoryStorage(conf, log)
 	r := router.New(handlers.New(conf, memStorage, log))
 
@@ -185,7 +185,7 @@ func ExampleHandler_GetJSONMetric() {
 
 	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
 	log := logger.NewZapLogger()
-	conf := serverconfig.NewServerConfig(log)
+	conf := serverconfig.NewServerConfigWithoutFlags(log)
 	memStorage := storage.NewMemoryStorage(conf, log)
 	r := router.New(handlers.New(conf, memStorage, log))
 
@@ -230,7 +230,7 @@ func ExampleHandler_GetMetric() {
 
 	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
 	log := logger.NewZapLogger()
-	conf := serverconfig.NewServerConfig(log)
+	conf := serverconfig.NewServerConfigWithoutFlags(log)
 	memStorage := storage.NewMemoryStorage(conf, log)
 	r := router.New(handlers.New(conf, memStorage, log))
 
@@ -274,7 +274,7 @@ func ExampleHandler_UpdateJSONMetric() {
 
 	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
 	log := logger.NewZapLogger()
-	conf := serverconfig.NewServerConfig(log)
+	conf := serverconfig.NewServerConfigWithoutFlags(log)
 	memStorage := storage.NewMemoryStorage(conf, log)
 	r := router.New(handlers.New(conf, memStorage, log))
 

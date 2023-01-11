@@ -56,6 +56,19 @@ func NewServerConfig(logger logger.ILogger) *Config {
 	return &conf
 }
 
+// NewServerConfigWithoutFlags собирает конфигурацию из значений по умолчанию и переменных окружения
+// приоритет по возрастанию: умолчание > переменные среды
+// используется для тестирования
+func NewServerConfigWithoutFlags(logger logger.ILogger) *Config {
+	conf := Config{
+		logger: logger,
+	}
+	conf.loadServerConfig()
+	conf.loadHTTPConfig()
+	conf.loadServerEnvConfiguration()
+	return &conf
+}
+
 func (config *Config) loadServerConfig() {
 	config.Server = ServerConfig{
 		StoreInterval:      300 * time.Second,
