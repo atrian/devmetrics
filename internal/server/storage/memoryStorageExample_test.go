@@ -2,6 +2,7 @@ package storage_test
 
 import (
 	"fmt"
+
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"github.com/atrian/devmetrics/internal/server/storage"
 	"github.com/atrian/devmetrics/pkg/logger"

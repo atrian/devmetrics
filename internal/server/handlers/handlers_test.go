@@ -1,9 +1,11 @@
 package handlers_test
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -116,4 +118,182 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (int, s
 
 	defer resp.Body.Close()
 	return resp.StatusCode, string(respBody)
+}
+
+func ExampleHandler_UpdateMetric() {
+	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
+	log := logger.NewZapLogger()
+	conf := serverconfig.NewServerConfig(log)
+	memStorage := storage.NewMemoryStorage(conf, log)
+	r := router.New(handlers.New(conf, memStorage, log))
+
+	// Запускаем тестовый сервер
+	testServer := httptest.NewServer(r)
+	defer testServer.Close()
+
+	// Запрос отправляется на Endpoint /update/counter/PollCount/3 POST методом
+	endpoint := testServer.URL + "/update/counter/PollCount/3"
+
+	request, _ := http.NewRequest(http.MethodPost, endpoint, nil)
+	response, _ := http.DefaultClient.Do(request)
+	defer response.Body.Close()
+
+	responseBody, _ := io.ReadAll(response.Body)
+
+	// В случае успеха сервис отвечает кодом 200 и текущим значением метрики
+	fmt.Println(response.StatusCode, string(responseBody))
+
+	// Output:
+	// 200 3
+}
+
+func ExampleHandler_UpdateJSONMetrics() {
+	// Подготавливаем к передаче метрики и счетчики в JSON формате
+	metricsInJSON := `[{"id":"YourCounter","type":"counter","delta":555},{"id":"YourGauge","type":"gauge","value":100.500}]`
+	metricsReader := strings.NewReader(metricsInJSON)
+
+	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
+	log := logger.NewZapLogger()
+	conf := serverconfig.NewServerConfig(log)
+	memStorage := storage.NewMemoryStorage(conf, log)
+	r := router.New(handlers.New(conf, memStorage, log))
+
+	// Запускаем тестовый сервер
+	testServer := httptest.NewServer(r)
+	defer testServer.Close()
+
+	// Запрос отправляется на Endpoint /updates/ POST методом. В теле передается JSON с метриками
+	endpoint := testServer.URL + "/updates/"
+
+	request, _ := http.NewRequest(http.MethodPost, endpoint, metricsReader)
+	response, _ := http.DefaultClient.Do(request)
+	defer response.Body.Close()
+
+	responseBody, _ := io.ReadAll(response.Body)
+
+	// В случае успеха сервис отвечает кодом 200 и JSON содержащим статус и текущие значения переданных метрик
+	fmt.Println(response.StatusCode, string(responseBody))
+
+	// Output:
+	// 200 {"Status":"OK","Updated":[{"id":"YourCounter","type":"counter","delta":555},{"id":"YourGauge","type":"gauge","value":100.5}]}
+}
+
+func ExampleHandler_GetJSONMetric() {
+	// Предварительная загрузка данных в сервис
+	metricsInJSON := `[{"id":"YourCounter","type":"counter","delta":876},{"id":"YourGauge","type":"gauge","value":100.500}]`
+	metricsReader := strings.NewReader(metricsInJSON)
+
+	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
+	log := logger.NewZapLogger()
+	conf := serverconfig.NewServerConfig(log)
+	memStorage := storage.NewMemoryStorage(conf, log)
+	r := router.New(handlers.New(conf, memStorage, log))
+
+	// Запускаем тестовый сервер
+	testServer := httptest.NewServer(r)
+	defer testServer.Close()
+
+	// Отправляем запрос на сохранение предварительно подготовленных данных
+	// на Endpoint /updates/ POST методом. В теле передается JSON с метриками
+	endpoint := testServer.URL + "/updates/"
+
+	request, _ := http.NewRequest(http.MethodPost, endpoint, metricsReader)
+	response, _ := http.DefaultClient.Do(request)
+	response.Body.Close()
+
+	// Делаем запрос нужной метрики
+	// на Endpoint /value/ POST методом
+	// id - имя метрики или счетчика
+	// type - тип метрики: gauge, counter
+
+	weWant := `{"id":"YourCounter","type":"counter"}`
+	metricReader := strings.NewReader(weWant)
+
+	endpoint = testServer.URL + "/value/"
+	request, _ = http.NewRequest(http.MethodPost, endpoint, metricReader)
+	response, _ = http.DefaultClient.Do(request)
+	defer response.Body.Close()
+
+	responseBody, _ := io.ReadAll(response.Body)
+
+	// В случае успеха сервис отвечает кодом 200 и текущим значением метрики в формате JSON
+	fmt.Println(response.StatusCode, string(responseBody))
+
+	// Output:
+	// 200 {"id":"YourCounter","type":"counter","delta":876}
+}
+
+func ExampleHandler_GetMetric() {
+	// Предварительная загрузка данных в сервис
+	metricsInJSON := `[{"id":"YourCounter","type":"counter","delta":741},{"id":"YourGauge","type":"gauge","value":500.500}]`
+	metricsReader := strings.NewReader(metricsInJSON)
+
+	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
+	log := logger.NewZapLogger()
+	conf := serverconfig.NewServerConfig(log)
+	memStorage := storage.NewMemoryStorage(conf, log)
+	r := router.New(handlers.New(conf, memStorage, log))
+
+	// Запускаем тестовый сервер
+	testServer := httptest.NewServer(r)
+	defer testServer.Close()
+
+	// Отправляем запрос на сохранение предварительно подготовленных данных
+	// на Endpoint /updates/ POST методом. В теле передается JSON с метриками
+	endpoint := testServer.URL + "/updates/"
+
+	request, _ := http.NewRequest(http.MethodPost, endpoint, metricsReader)
+	response, _ := http.DefaultClient.Do(request)
+	response.Body.Close()
+
+	// Делаем запрос нужной метрики
+	// на Endpoint /value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ> GET методом
+	// тип метрики: gauge, counter
+
+	weWant := `{"id":"YourCounter","type":"counter"}`
+	metricReader := strings.NewReader(weWant)
+
+	endpoint = testServer.URL + "/value/gauge/YourGauge"
+	request, _ = http.NewRequest(http.MethodGet, endpoint, metricReader)
+	response, _ = http.DefaultClient.Do(request)
+	defer response.Body.Close()
+
+	responseBody, _ := io.ReadAll(response.Body)
+
+	// В случае успеха сервис отвечает кодом 200 и текущим значением метрики
+	fmt.Println(response.StatusCode, string(responseBody))
+
+	// Output:
+	// 200 500.5
+}
+
+func ExampleHandler_UpdateJSONMetric() {
+	// Подготавливаем к передаче метрику или счетчик в JSON формате
+	metricInJSON := `{"id":"YourCounter","type":"counter","delta":835}`
+	metricReader := strings.NewReader(metricInJSON)
+
+	// Подготавливаем все зависимости, логгер, конфигурацию приложения, хранилище (In Memory) и роутер
+	log := logger.NewZapLogger()
+	conf := serverconfig.NewServerConfig(log)
+	memStorage := storage.NewMemoryStorage(conf, log)
+	r := router.New(handlers.New(conf, memStorage, log))
+
+	// Запускаем тестовый сервер
+	testServer := httptest.NewServer(r)
+	defer testServer.Close()
+
+	// Запрос отправляется на Endpoint /update/ POST методом. В теле передается JSON с метрикой
+	endpoint := testServer.URL + "/update/"
+
+	request, _ := http.NewRequest(http.MethodPost, endpoint, metricReader)
+	response, _ := http.DefaultClient.Do(request)
+	defer response.Body.Close()
+
+	responseBody, _ := io.ReadAll(response.Body)
+
+	// В случае успеха сервис отвечает кодом 200 и JSON содержащим статус и текущие значения переданной метрики
+	fmt.Println(response.StatusCode, string(responseBody))
+
+	// Output:
+	// 200 {"id":"YourCounter","type":"counter","delta":835}
 }
