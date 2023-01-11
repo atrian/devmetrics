@@ -8,13 +8,13 @@ import (
 )
 
 type Handler struct {
-	storage storage.Repository
+	storage storage.IRepository
 	config  *serverconfig.Config
-	hasher  crypto.Hasher
-	logger  logger.Logger
+	hasher  crypto.IHasher
+	logger  logger.ILogger
 }
 
-func New(config *serverconfig.Config, storage storage.Repository, logger logger.Logger) *Handler {
+func New(config *serverconfig.Config, storage storage.IRepository, logger logger.ILogger) *Handler {
 	h := &Handler{
 		storage: storage,
 		config:  config,

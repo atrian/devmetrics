@@ -13,14 +13,17 @@ import (
 	"github.com/atrian/devmetrics/pkg/logger"
 )
 
+// Uploader отправляет данные метрик и счетчиков на удаленный сервер
 type Uploader struct {
 	client *http.Client
-	config *agentconfig.Config
-	hasher crypto.Hasher
-	logger logger.Logger
+	config *agentconfig.Config // config конфигурация приложения
+	hasher crypto.IHasher      // hasher подпись метрик
+	logger logger.ILogger
 }
 
-func NewUploader(config *agentconfig.Config, logger logger.Logger) *Uploader {
+// NewUploader принимает конфигурацию и логгер, подключает зависимости:
+// crypto.Sha256Hasher, http.Client
+func NewUploader(config *agentconfig.Config, logger logger.ILogger) *Uploader {
 	uploader := Uploader{
 		client: &http.Client{},
 		config: config,
@@ -30,7 +33,8 @@ func NewUploader(config *agentconfig.Config, logger logger.Logger) *Uploader {
 	return &uploader
 }
 
-// SendStat отправка метрик на сервер
+// SendStat отправка одной подписанной метрики на сервер в JSON формате
+// Deprecated: метод заменен на массовую отправку через SendAllStats
 func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 	for key, metric := range metrics.GaugeDict {
 		gaugeValue := metric.getGaugeValue()
@@ -69,6 +73,7 @@ func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 	}
 }
 
+// SendAllStats всех метрик на сервер с подписью в JSON формате
 func (uploader *Uploader) SendAllStats(metrics *MetricsDics) {
 	// создаем функцию-декоратор для того чтобы не тащить хешер и конфиг в другой слой приложения напрямую
 	configuredHasher := func(metricType, id string, delta *int64, value *float64) string {
@@ -96,7 +101,8 @@ func (uploader *Uploader) SendAllStats(metrics *MetricsDics) {
 	uploader.sendGzippedRequest(jsonMetrics)
 }
 
-// отправка запроса, обработка ответа
+// sendRequest отправка запроса, используется для массовой отправки метрик методом POST
+// Используется gzip сжатие, передается заголовок Content-Encoding: gzip
 func (uploader *Uploader) sendRequest(body []byte) {
 	// строим адрес сервера
 	endpoint := uploader.buildStatUploadURL()
@@ -119,6 +125,8 @@ func (uploader *Uploader) sendRequest(body []byte) {
 	}
 }
 
+// sendGzippedRequest отправка запроса, используется для отправки метрик методом POST
+// без сжатия
 func (uploader *Uploader) sendGzippedRequest(body []byte) {
 	if len(body) == 0 {
 		uploader.logger.Debug("Empty body, return")
@@ -159,14 +167,15 @@ func (uploader *Uploader) sendGzippedRequest(body []byte) {
 	}
 }
 
-// построение целевого адреса для отправки одной метрики
+// buildStatUploadURL построение целевого адреса для отправки одной метрики
+// Deprecated: отправка одной метрики больше не используется, применяйте buildStatsUploadURL
 func (uploader *Uploader) buildStatUploadURL() string {
 	return fmt.Sprintf(uploader.config.HTTP.URLTemplate,
 		uploader.config.HTTP.Protocol,
 		uploader.config.HTTP.Address) + "update/"
 }
 
-// построение целевого адреса для отправки метрик
+// buildStatsUploadURL построение целевого адреса для массовой отправки метрик
 func (uploader *Uploader) buildStatsUploadURL() string {
 	return fmt.Sprintf(uploader.config.HTTP.URLTemplate,
 		uploader.config.HTTP.Protocol,

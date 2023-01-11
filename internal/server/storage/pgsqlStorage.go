@@ -17,18 +17,22 @@ import (
 	"github.com/atrian/devmetrics/pkg/logger"
 )
 
+// PoolStatInterval интервал вывода в лог статистики работы pgxpool
 const PoolStatInterval = 30 * time.Second
 
+// PgSQLStorage PostgreSQL хранилище для метрик и счетчиков
 type PgSQLStorage struct {
 	pgPool  *pgxpool.Pool
 	metrics *MetricsDicts
 	config  *serverconfig.Config
-	logger  logger.Logger
+	logger  logger.ILogger
 }
 
-var _ Repository = (*PgSQLStorage)(nil)
+var _ IRepository = (*PgSQLStorage)(nil)
 
-func NewPgSQLStorage(config *serverconfig.Config, logger logger.Logger) (*PgSQLStorage, error) {
+// NewPgSQLStorage возвращает указатель на PgSQLStorage который сконфигурирован со всеми зависимостями
+// для работы с БД используется pgxpool
+func NewPgSQLStorage(config *serverconfig.Config, logger logger.ILogger) (*PgSQLStorage, error) {
 	dbPool, poolErr := pgxpool.Connect(context.Background(), config.Server.DBDSN)
 	if poolErr != nil {
 		logger.Error("NewPgSQLStorage pgxpool.Connect", poolErr)
@@ -52,6 +56,7 @@ func upsertMetricQuery() string {
 		SET type = $2, delta = $3, value = $4;`
 }
 
+// StoreGauge сохранение метрики в БД
 func (s *PgSQLStorage) StoreGauge(name string, value float64) error {
 	_, err := s.pgPool.Exec(context.Background(), upsertMetricQuery(), name, "gauge", nil, value)
 	if err != nil {
@@ -61,6 +66,7 @@ func (s *PgSQLStorage) StoreGauge(name string, value float64) error {
 	return nil
 }
 
+// StoreCounter сохранение счетчика в БД
 func (s *PgSQLStorage) StoreCounter(name string, value int64) error {
 	// Проверяем есть ли уже счетчик в базе, если есть, суммируем данные
 	storedCounter, exist := s.GetCounter(name)
@@ -78,6 +84,7 @@ func (s *PgSQLStorage) StoreCounter(name string, value int64) error {
 	return nil
 }
 
+// GetGauge получение метрики по имени
 func (s *PgSQLStorage) GetGauge(name string) (float64, bool) {
 	var value float64
 
@@ -93,6 +100,7 @@ func (s *PgSQLStorage) GetGauge(name string) (float64, bool) {
 	}
 }
 
+// GetCounter получение счетчика по имени
 func (s *PgSQLStorage) GetCounter(name string) (int64, bool) {
 	var delta int64
 
@@ -108,6 +116,7 @@ func (s *PgSQLStorage) GetCounter(name string) (int64, bool) {
 	}
 }
 
+// GetMetrics получение всех метрик и счетчиков из БД в структуре MetricsDicts
 func (s *PgSQLStorage) GetMetrics() *MetricsDicts {
 	var (
 		metricID   string
@@ -226,6 +235,7 @@ func (s *PgSQLStorage) runMigrations(dsn string) {
 	}
 }
 
+// poolStatLogger логирование статистики работы pgxpool
 func (s *PgSQLStorage) poolStatLogger(pgPool *pgxpool.Pool) {
 	// запускаем тикер дампа статистики пула соединений с БД
 	dumpPGPoolStatTicker := time.NewTicker(PoolStatInterval)

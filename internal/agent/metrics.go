@@ -13,26 +13,32 @@ import (
 	"github.com/atrian/devmetrics/pkg/logger"
 )
 
+// Типы собираемых в приложении метрик
 const (
-	RuntimeMetric = iota
-	GopsMetric
-	CPUMetric
+	RuntimeMetric = iota // RuntimeMetric метрики из runtime.MemStats
+	GopsMetric           // GopsMetric метрики из mem.VirtualMemoryStat
+	CPUMetric            // CPUMetric метрики CPU утилизации
 )
 
+// MetricsDics In Memory хранилище для собранных метрик.
+// Потокобезопасно, использует sync.RWMutex
 type MetricsDics struct {
-	GaugeDict   map[string]*GaugeMetric
-	CounterDict map[string]*CounterMetric
-	logger      logger.Logger
+	GaugeDict   map[string]*GaugeMetric   // GaugeDict мапа для хранения метрик
+	CounterDict map[string]*CounterMetric // CounterDict мапа для хранения счетчиков
+	logger      logger.ILogger
 	mu          sync.RWMutex
 }
 
 // StatsHolder контейнер для разных источников статистики
 type StatsHolder struct {
+	// RuntimeMemStat указатель на метрики runtime.MemStats
 	RuntimeMemStat *runtime.MemStats
-	GopsMemStat    *mem.VirtualMemoryStat
-	mu             sync.RWMutex
+	// GopsMemStat указатель на метрики mem.VirtualMemoryStat
+	GopsMemStat *mem.VirtualMemoryStat
+	mu          sync.RWMutex
 }
 
+// NewStatsHolder инициализация контейнера с внешними метриками, обновление данных
 func NewStatsHolder() *StatsHolder {
 	sh := StatsHolder{}
 	sh.updateGopsMemStat()
@@ -41,6 +47,8 @@ func NewStatsHolder() *StatsHolder {
 	return &sh
 }
 
+// updateRuntimeStat обновление метрик runtime.MemStats в контейнере внешних метрик
+// Потокобезопасно, использует sync.RWMutex
 func (sh *StatsHolder) updateRuntimeStat() {
 	sh.mu.Lock()
 	var stat runtime.MemStats
@@ -49,32 +57,40 @@ func (sh *StatsHolder) updateRuntimeStat() {
 	sh.mu.Unlock()
 }
 
+// updateGopsMemStat обновление метрик mem.VirtualMemoryStat в контейнере внешних метрик
+// Потокобезопасно, использует sync.RWMutex
 func (sh *StatsHolder) updateGopsMemStat() {
 	sh.mu.Lock()
 	sh.GopsMemStat, _ = mem.VirtualMemory()
 	sh.mu.Unlock()
 }
 
+// GaugeMetric - структура для хранения данных метрики и функции извлечения актуальных показателей
 type GaugeMetric struct {
-	source    int
-	value     gauge
-	pullValue func(sh *StatsHolder) gauge
+	source    int                         // тип собираемой метрики, RuntimeMetric | GopsMetric | CPUMetric
+	value     gauge                       // текущее значение метрики
+	pullValue func(sh *StatsHolder) gauge // функция обновления данных
 }
 
+// getGaugeValue возвращает значение метрики в формате float64
 func (g *GaugeMetric) getGaugeValue() float64 {
 	return float64(g.value)
 }
 
+// CounterMetric - структура для хранения данных счетчика и функция вычисления следующего значения
 type CounterMetric struct {
-	value              counter
-	calculateNextValue func(c *CounterMetric) counter
+	value              counter                        // текущее значение счетчика
+	calculateNextValue func(c *CounterMetric) counter // функция обновления данных
 }
 
+// getCounterValue возвращает значение метрики в формате int64
 func (c *CounterMetric) getCounterValue() int64 {
 	return int64(c.value)
 }
 
-func NewMetricsDicts(logger logger.Logger) *MetricsDics {
+// NewMetricsDicts инициализация хранилища собранных метрик и счетчиков
+// содержит список всех собираемых метрик и счетчиков а так же правила получения/обновления данных
+func NewMetricsDicts(logger logger.ILogger) *MetricsDics {
 	dict := MetricsDics{
 		GaugeDict: map[string]*GaugeMetric{
 			"Alloc": {pullValue: func(sh *StatsHolder) gauge {
@@ -180,6 +196,7 @@ func NewMetricsDicts(logger logger.Logger) *MetricsDics {
 	return &dict
 }
 
+// updateRuntimeMetrics обновление данных мониторинга runtime.MemStats метрик
 func (md *MetricsDics) updateRuntimeMetrics() {
 	md.mu.Lock()         // блокируем mutex
 	defer md.mu.Unlock() // разблокируем после обновления всех метрик
@@ -187,6 +204,7 @@ func (md *MetricsDics) updateRuntimeMetrics() {
 	md.update(RuntimeMetric)
 }
 
+// updateGopsMetrics обновление данных мониторинга mem.VirtualMemoryStat метрик
 func (md *MetricsDics) updateGopsMetrics() {
 	md.mu.Lock()         // блокируем mutex
 	defer md.mu.Unlock() // разблокируем после обновления всех метрик
@@ -195,6 +213,7 @@ func (md *MetricsDics) updateGopsMetrics() {
 	md.update(GopsMetric)
 }
 
+// updateCPUMetrics обновление данных по утилизации CPU
 func (md *MetricsDics) updateCPUMetrics() {
 	cpuStats, err := cpu.Percent(0, true)
 	if err != nil {
@@ -213,6 +232,7 @@ func (md *MetricsDics) updateCPUMetrics() {
 	}
 }
 
+// update обновление значений всех доступных метрик с учетом источника
 func (md *MetricsDics) update(metricType int) {
 	// получаем данные мониторинга
 	statsHolder := NewStatsHolder()

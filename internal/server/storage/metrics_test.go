@@ -1,20 +1,20 @@
 package storage
 
 import (
-	"github.com/atrian/devmetrics/pkg/logger"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
+	"github.com/atrian/devmetrics/pkg/logger"
 )
 
 type HandlersTestSuite struct {
 	suite.Suite
 	config  *serverconfig.Config
-	storage Repository
-	logger  logger.Logger
+	storage IRepository
+	logger  logger.ILogger
 }
 
 func (suite *HandlersTestSuite) SetupSuite() {

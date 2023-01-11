@@ -1,0 +1,240 @@
+basePath: /
+definitions:
+  dto.EmptyMetric:
+    properties:
+      id:
+        description: имя метрики
+        type: string
+      type:
+        description: параметр, принимающий значение gauge или counter
+        type: string
+    type: object
+  dto.Metrics:
+    properties:
+      delta:
+        description: Delta значение метрики в случае передачи counter
+        type: integer
+      hash:
+        description: Hash значение хеш-функции - подпись для проверки подлинности
+          метрики
+        type: string
+      id:
+        description: ID имя метрики
+        type: string
+      type:
+        description: MType параметр, принимающий значение gauge или counter
+        type: string
+      value:
+        description: Value значение метрики в случае передачи gauge
+        type: number
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Сервис хранения метрик и счетчиков.
+  title: Metrics storage API
+  version: "1.0"
+paths:
+  /:
+    get:
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML страница с метриками
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+      summary: Выводит все метрики в html виде
+      tags:
+      - Metrics
+  /ping:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Нет соединения с БД
+          schema:
+            type: string
+      summary: Запрос состояния соединения с базой данных
+      tags:
+      - Info
+  /update/:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Принимает JSON с данными метрики, возвращает JSON с обновленными
+          данными
+        in: body
+        name: metric
+        required: true
+        schema:
+          $ref: '#/definitions/dto.Metrics'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Metrics'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Обновление одной метрики с передачей данных в JSON формате
+      tags:
+      - Metrics
+  /updates/:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Принимает JSON массивом метрик, возвращает JSON с обновленными
+          данными
+        in: body
+        name: metrics
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/dto.Metrics'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.Metrics'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Массовое обновление данных метрик с передачей данных в JSON формате
+      tags:
+      - Metrics
+  /value/:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Сервис принимает пустую метрику с указанием типа и имени метрики,
+          отдает JSON наполненный данными
+        in: body
+        name: metric
+        required: true
+        schema:
+          $ref: '#/definitions/dto.EmptyMetric'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Metrics'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Запрос одной метрики с указанием её типа и имени
+      tags:
+      - Metrics
+  /value/{metric_type}/{metric_name}:
+    get:
+      parameters:
+      - description: 'Тип метрики: counter, gauge'
+        in: path
+        name: metric_type
+        required: true
+        type: string
+      - description: Имя метрики
+        in: path
+        name: metric_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Metrics'
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Запрос одной метрики с указанием её типа и имени
+      tags:
+      - Metrics
+  /value/{metric_type}/{metric_name}/{value}:
+    get:
+      parameters:
+      - description: 'Тип метрики: counter, gauge'
+        in: path
+        name: metric_type
+        required: true
+        type: string
+      - description: Имя метрики
+        in: path
+        name: metric_name
+        required: true
+        type: string
+      - description: Значение метрики
+        in: path
+        name: value
+        required: true
+        type: number
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: Текущее значение метрики
+          schema:
+            type: number
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Запрос одной метрики с указанием её типа и имени
+      tags:
+      - Metrics
+swagger: "2.0"
+tags:
+- description: '"Группа запросов состояния сервиса"'
+  name: Info
+- description: '"Группа для работы с данными метрик"'
+  name: Metrics

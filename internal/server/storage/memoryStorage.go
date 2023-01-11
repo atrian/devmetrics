@@ -11,16 +11,18 @@ import (
 	"github.com/atrian/devmetrics/pkg/logger"
 )
 
+// MemoryStorage In Memory хранилище для метрик
 type MemoryStorage struct {
 	metrics     *MetricsDicts
 	config      *serverconfig.Config
-	logger      logger.Logger
+	logger      logger.ILogger
 	silentStore bool
 }
 
-var _ Repository = (*MemoryStorage)(nil)
+var _ IRepository = (*MemoryStorage)(nil)
 
-func NewMemoryStorage(config *serverconfig.Config, logger logger.Logger) *MemoryStorage {
+// NewMemoryStorage возвращает указатель на In Memory хранилище со всеми зависимостями
+func NewMemoryStorage(config *serverconfig.Config, logger logger.ILogger) *MemoryStorage {
 	storage := MemoryStorage{
 		metrics: NewMetricsDicts(),
 		config:  config,
@@ -29,6 +31,8 @@ func NewMemoryStorage(config *serverconfig.Config, logger logger.Logger) *Memory
 	return &storage
 }
 
+// StoreGauge сохранение метрики в In Memory хранилище
+// если s.silentStore == false будет произведен дамп в файл
 func (s *MemoryStorage) StoreGauge(name string, value float64) error {
 	s.metrics.GaugeDict[name] = gauge(value)
 	if !s.silentStore {
@@ -41,11 +45,15 @@ func (s *MemoryStorage) StoreGauge(name string, value float64) error {
 	return nil
 }
 
+// GetGauge получение значения метрики по имени
+// если метрики нет, вернется 0, false
 func (s *MemoryStorage) GetGauge(name string) (float64, bool) {
 	value, exist := s.metrics.GaugeDict[name]
 	return float64(value), exist
 }
 
+// StoreCounter сохранение счетчика в In Memory хранилище
+// если s.silentStore == false будет произведен дамп в файл
 func (s *MemoryStorage) StoreCounter(name string, value int64) error {
 	s.metrics.CounterDict[name] += counter(value)
 	if !s.silentStore {
@@ -58,11 +66,14 @@ func (s *MemoryStorage) StoreCounter(name string, value int64) error {
 	return nil
 }
 
+// GetCounter получение значения счетчика по имени
+// если счетчика нет, вернется 0, false
 func (s *MemoryStorage) GetCounter(name string) (int64, bool) {
 	value, exist := s.metrics.CounterDict[name]
 	return int64(value), exist
 }
 
+// GetMetrics получение всего справочника метрик MetricsDicts
 func (s *MemoryStorage) GetMetrics() *MetricsDicts {
 	return s.metrics
 }
@@ -119,7 +130,7 @@ func (s *MemoryStorage) DumpToFile(filename string) error {
 	return nil
 }
 
-// RestoreFromFile Восстановление данных из файла
+// RestoreFromFile Восстановление данных из дамп файла на диске
 func (s *MemoryStorage) RestoreFromFile(filename string) error {
 	s.logger.Info("Restore metrics from file")
 
@@ -143,6 +154,7 @@ func (s *MemoryStorage) RestoreFromFile(filename string) error {
 	return nil
 }
 
+// SetMetrics массовое обновление данных в хранилище из слайса с dto.Metrics
 func (s *MemoryStorage) SetMetrics(metrics []dto.Metrics) {
 	s.silentStore = true
 	for key, metricCandidate := range metrics {
@@ -177,6 +189,8 @@ func (s *MemoryStorage) syncWithFileOnUpdate() error {
 }
 
 // RunOnStart метод вызывается при старте хранилища
+// восстанавливает данные из файла (s.config.Server.Restore)
+// устанавливает интервал сброса дампа на диск
 func (s *MemoryStorage) RunOnStart() {
 	// RESTORE (по умолчанию true) — булево значение (true/false), определяющее,
 	// загружать или нет начальные значения из указанного файла при старте сервера.
@@ -196,6 +210,7 @@ func (s *MemoryStorage) RunOnStart() {
 }
 
 // RunOnClose метод вызывается при штатном завершении
+// запускает дамп на диск перед завершением
 func (s *MemoryStorage) RunOnClose() {
 	s.logger.Info("Dump metrics to file before shutdown")
 	err := s.DumpToFile(s.config.Server.StoreFile)

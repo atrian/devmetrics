@@ -1,5 +1,6 @@
 package storage
 
+// MetricsDicts структура для хранения метрик и счетчиков
 type MetricsDicts struct {
 	GaugeDict   map[string]gauge
 	CounterDict map[string]counter
