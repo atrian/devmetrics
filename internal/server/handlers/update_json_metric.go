@@ -9,7 +9,17 @@ import (
 	"github.com/atrian/devmetrics/internal/dto"
 )
 
-// UpdateJSONMetric обновление метрик POST /update в JSON
+// UpdateJSONMetric обновление метрик POST /update/ в JSON
+// @Tags Metrics
+// @Summary Обновление одной метрики с передачей данных в JSON формате
+// @Accept  json
+// @Produce json
+// @Param metric body dto.Metrics true "Принимает JSON с данными метрики, возвращает JSON с обновленными данными"
+// @Success 200 {object} dto.Metrics
+// @Failure 400 {string} string ""
+// @Failure 404 {string} string ""
+// @Failure 500 {string} string ""
+// @Router /update/ [post]
 func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		metric, err := h.unmarshallMetric(r.Body)

@@ -6,7 +6,17 @@ import (
 	"net/http"
 )
 
-// GetJSONMetric получение метрик GET /value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>
+// GetJSONMetric получение метрик POST /value/
+// @Tags Metrics
+// @Summary Запрос одной метрики с указанием её типа и имени
+// @Accept  json
+// @Produce json
+// @Param metric body dto.EmptyMetric true "Сервис принимает пустую метрику с указанием типа и имени метрики, отдает JSON наполненный данными"
+// @Success 200 {object} dto.Metrics
+// @Failure 400 {string} string ""
+// @Failure 404 {string} string ""
+// @Failure 500 {string} string ""
+// @Router /value/ [post]
 func (h *Handler) GetJSONMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", h.config.HTTP.ContentType)

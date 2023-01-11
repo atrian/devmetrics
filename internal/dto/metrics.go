@@ -8,3 +8,9 @@ type Metrics struct {
 	Value *float64 `json:"value,omitempty"` // Value значение метрики в случае передачи gauge
 	Hash  string   `json:"hash,omitempty"`  // Hash значение хеш-функции - подпись для проверки подлинности метрики
 }
+
+// EmptyMetric используется в примерах и документации для запроса значений метрик
+type EmptyMetric struct {
+	ID    string `json:"id"`   // имя метрики
+	MType string `json:"type"` // параметр, принимающий значение gauge или counter
+}
