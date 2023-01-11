@@ -3,12 +3,11 @@ package storage
 import (
 	"testing"
 
-	"github.com/atrian/devmetrics/pkg/logger"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
+	"github.com/atrian/devmetrics/pkg/logger"
 )
 
 type HandlersTestSuite struct {
