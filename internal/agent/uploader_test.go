@@ -40,7 +40,7 @@ func TestUploader_buildStatUploadURL(t *testing.T) {
 				metricTitle: "Alloc",
 				metricValue: "0.0000",
 			},
-			want: fmt.Sprintf("%v://%v/update/",
+			want: fmt.Sprintf("%v://%v/updates/",
 				config.HTTP.Protocol,
 				config.HTTP.Address,
 			),
@@ -52,8 +52,8 @@ func TestUploader_buildStatUploadURL(t *testing.T) {
 				client: tt.fields.client,
 				config: tt.fields.config,
 			}
-			if got := uploader.buildStatUploadURL(); got != tt.want {
-				t.Errorf("buildStatUploadURL() = %v, want %v", got, tt.want)
+			if got := uploader.buildStatsUploadURL(); got != tt.want {
+				t.Errorf("buildStatsUploadURL() = %v, want %v", got, tt.want)
 			}
 		})
 	}

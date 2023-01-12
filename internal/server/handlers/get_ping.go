@@ -8,6 +8,12 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+// GetPing проверка соединения с базой данных
+// @Tags Info
+// @Summary Запрос состояния соединения с базой данных
+// @Success 200 {string} string ""
+// @Failure 500 {string} string "Нет соединения с БД"
+// @Router /ping [get]
 func (h *Handler) GetPing() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// соединение с БД

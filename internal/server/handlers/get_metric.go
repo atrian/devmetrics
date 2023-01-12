@@ -8,6 +8,16 @@ import (
 )
 
 // GetMetric получение метрик GET /value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>
+// @Tags Metrics
+// @Summary Запрос одной метрики с указанием её типа и имени
+// @Produce json
+// @Param metric_type path string true "Тип метрики: counter, gauge"
+// @Param metric_name path string true "Имя метрики"
+// @Success 200 {object} dto.Metrics
+// @Failure 400
+// @Failure 404
+// @Failure 500
+// @Router /value/{metric_type}/{metric_name} [get]
 func (h *Handler) GetMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		metricType := chi.URLParam(r, "metricType")

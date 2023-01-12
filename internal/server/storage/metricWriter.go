@@ -7,26 +7,30 @@ import (
 	"github.com/atrian/devmetrics/internal/dto"
 )
 
-type metricWriter struct {
+// MetricWriter записывает данные из слайса dto.Metrics в файл на диске
+type MetricWriter struct {
 	file    *os.File
 	encoder *json.Encoder
 }
 
-func NewMetricWriter(fileName string) (*metricWriter, error) {
+// NewMetricWriter принимает на вход имя файла и подготавливает MetricWriter со всеми зависимостями
+func NewMetricWriter(fileName string) (*MetricWriter, error) {
 	file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
 	if err != nil {
 		return nil, err
 	}
-	return &metricWriter{
+	return &MetricWriter{
 		file:    file,
 		encoder: json.NewEncoder(file),
 	}, nil
 }
 
-func (mw *metricWriter) WriteMetric(metrics *[]dto.Metrics) error {
+// WriteMetric дамп метрик в JSON формате на диск
+func (mw *MetricWriter) WriteMetric(metrics *[]dto.Metrics) error {
 	return mw.encoder.Encode(&metrics)
 }
 
-func (mw *metricWriter) Close() error {
+// Close закрывает файл с дампом, совобождает ресурсы
+func (mw *MetricWriter) Close() error {
 	return mw.file.Close()
 }

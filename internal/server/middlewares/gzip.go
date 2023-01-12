@@ -16,6 +16,7 @@ func (w gzipWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
+// GzipHandle осуществляет gzip сжатие если клиент его поддерживает (Accept-Encoding gzip)
 func GzipHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// проверяем, что клиент поддерживает gzip-сжатие
