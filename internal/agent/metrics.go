@@ -25,7 +25,7 @@ const (
 type MetricsDics struct {
 	GaugeDict   map[string]*GaugeMetric   // GaugeDict мапа для хранения метрик
 	CounterDict map[string]*CounterMetric // CounterDict мапа для хранения счетчиков
-	logger      logger.ILogger
+	logger      logger.Logger
 	mu          sync.RWMutex
 }
 
@@ -90,7 +90,7 @@ func (c *CounterMetric) getCounterValue() int64 {
 
 // NewMetricsDicts инициализация хранилища собранных метрик и счетчиков
 // содержит список всех собираемых метрик и счетчиков а так же правила получения/обновления данных
-func NewMetricsDicts(logger logger.ILogger) *MetricsDics {
+func NewMetricsDicts(logger logger.Logger) *MetricsDics {
 	dict := MetricsDics{
 		GaugeDict: map[string]*GaugeMetric{
 			"Alloc": {pullValue: func(sh *StatsHolder) gauge {

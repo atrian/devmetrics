@@ -24,7 +24,7 @@ type HandlersTestSuite struct {
 	config  *serverconfig.Config
 	storage storage.IRepository
 	router  *router.Router
-	logger  logger.ILogger
+	logger  logger.Logger
 }
 
 func (suite *HandlersTestSuite) SetupSuite() {

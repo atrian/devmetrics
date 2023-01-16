@@ -1,3 +1,5 @@
+// Package middlewares пакет с пользовательскими посредниками для запроса.
+// Содержит реализацию Gzip сжатия см. GzipHandle
 package middlewares
 
 import (

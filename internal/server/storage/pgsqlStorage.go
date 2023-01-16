@@ -25,14 +25,14 @@ type PgSQLStorage struct {
 	pgPool  *pgxpool.Pool
 	metrics *MetricsDicts
 	config  *serverconfig.Config
-	logger  logger.ILogger
+	logger  logger.Logger
 }
 
 var _ IRepository = (*PgSQLStorage)(nil)
 
 // NewPgSQLStorage возвращает указатель на PgSQLStorage который сконфигурирован со всеми зависимостями
 // для работы с БД используется pgxpool
-func NewPgSQLStorage(config *serverconfig.Config, logger logger.ILogger) (*PgSQLStorage, error) {
+func NewPgSQLStorage(config *serverconfig.Config, logger logger.Logger) (*PgSQLStorage, error) {
 	dbPool, poolErr := pgxpool.Connect(context.Background(), config.Server.DBDSN)
 	if poolErr != nil {
 		logger.Error("NewPgSQLStorage pgxpool.Connect", poolErr)

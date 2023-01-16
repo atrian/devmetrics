@@ -15,14 +15,14 @@ import (
 type MemoryStorage struct {
 	metrics     *MetricsDicts
 	config      *serverconfig.Config
-	logger      logger.ILogger
+	logger      logger.Logger
 	silentStore bool
 }
 
 var _ IRepository = (*MemoryStorage)(nil)
 
 // NewMemoryStorage возвращает указатель на In Memory хранилище со всеми зависимостями
-func NewMemoryStorage(config *serverconfig.Config, logger logger.ILogger) *MemoryStorage {
+func NewMemoryStorage(config *serverconfig.Config, logger logger.Logger) *MemoryStorage {
 	storage := MemoryStorage{
 		metrics: NewMetricsDicts(),
 		config:  config,

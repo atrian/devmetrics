@@ -1,3 +1,5 @@
+// Package storage пакет содержит структуры для хранения метрик в памяти и постоянном хранилище
+// интерфейс IRepository и 2 его реализации MemoryStorage и PgSQLStorage
 package storage
 
 // MetricsDicts структура для хранения метрик и счетчиков

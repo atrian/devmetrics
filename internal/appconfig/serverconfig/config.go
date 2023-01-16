@@ -1,3 +1,5 @@
+// Package serverconfig Конфигурация сервера хранения метрик.
+// Содержит адрес сервера, dsn соединения с БД, ключ для проверки цифровых подписей метрик, флаг профилирования
 package serverconfig
 
 import (
@@ -23,7 +25,7 @@ var (
 type Config struct {
 	Server ServerConfig
 	HTTP   HTTPConfig
-	logger logger.ILogger
+	logger logger.Logger
 }
 
 // ServerConfig основная конфигурация сервера для хранения метрик
@@ -45,7 +47,7 @@ type HTTPConfig struct {
 
 // NewServerConfig собирает конфигурацию из значений по умолчанию, переданных флагов и переменных окружения
 // приоритет по возрастанию: умолчание > флаги > переменные среды
-func NewServerConfig(logger logger.ILogger) *Config {
+func NewServerConfig(logger logger.Logger) *Config {
 	conf := Config{
 		logger: logger,
 	}
@@ -59,7 +61,8 @@ func NewServerConfig(logger logger.ILogger) *Config {
 // NewServerConfigWithoutFlags собирает конфигурацию из значений по умолчанию и переменных окружения
 // приоритет по возрастанию: умолчание > переменные среды
 // используется для тестирования
-func NewServerConfigWithoutFlags(logger logger.ILogger) *Config {
+// TODO - удалить метод, переписать тесты
+func NewServerConfigWithoutFlags(logger logger.Logger) *Config {
 	conf := Config{
 		logger: logger,
 	}

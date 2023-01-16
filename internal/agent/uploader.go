@@ -17,13 +17,13 @@ import (
 type Uploader struct {
 	client *http.Client
 	config *agentconfig.Config // config конфигурация приложения
-	hasher crypto.IHasher      // hasher подпись метрик
-	logger logger.ILogger
+	hasher crypto.Hasher       // hasher подпись метрик
+	logger logger.Logger
 }
 
 // NewUploader принимает конфигурацию и логгер, подключает зависимости:
 // crypto.Sha256Hasher, http.Client
-func NewUploader(config *agentconfig.Config, logger logger.ILogger) *Uploader {
+func NewUploader(config *agentconfig.Config, logger logger.Logger) *Uploader {
 	uploader := Uploader{
 		client: &http.Client{},
 		config: config,

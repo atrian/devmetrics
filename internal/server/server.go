@@ -23,7 +23,7 @@ import (
 type Server struct {
 	config  *serverconfig.Config
 	storage storage.IRepository
-	logger  logger.ILogger
+	logger  logger.Logger
 }
 
 // NewServer возвращает указатель на Server сконфигурированный со всеми зависимостями:

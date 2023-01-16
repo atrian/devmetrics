@@ -10,7 +10,7 @@ import (
 
 func ExampleMemoryStorage() {
 	var (
-		l          logger.ILogger
+		l          logger.Logger
 		c          *serverconfig.Config
 		memStorage *storage.MemoryStorage
 	)

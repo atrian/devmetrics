@@ -30,7 +30,7 @@ type Agent struct {
 	// metrics in memory хранилище для собираемых метрик
 	metrics *MetricsDics
 	// logger интерфейс логгера, в приложении используется ZAP логгер
-	logger logger.ILogger
+	logger logger.Logger
 }
 
 // Run запуск основных функций: сбор статистики и отправка на сервер с определенным интервалом

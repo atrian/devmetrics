@@ -1,3 +1,4 @@
+// Package router сожержит все доступные веб роуты приложения
 package router
 
 import (

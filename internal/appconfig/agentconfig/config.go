@@ -1,3 +1,5 @@
+// Package agentconfig Конфигурация агента сборщика метрик.
+// Содержит интервалы сборки и отправки, адрес сервера, ключ для цифровой подписи метрик
 package agentconfig
 
 import (
@@ -19,7 +21,7 @@ var (
 type Config struct {
 	Agent  AgentConfig // Agent конфигурация параметров сбора и отправки
 	HTTP   HTTPConfig  // HTTP конфигурация транспорта
-	logger logger.ILogger
+	logger logger.Logger
 }
 
 // AgentConfig конфигурация параметров сбора и отправки метрик
@@ -39,7 +41,7 @@ type HTTPConfig struct {
 
 // NewConfig собирает конфигурацию из значений по умолчанию, переданных флагов и переменных окружения
 // приоритет по возрастанию: умолчание > флаги > переменные среды
-func NewConfig(logger logger.ILogger) *Config {
+func NewConfig(logger logger.Logger) *Config {
 	config := Config{
 		logger: logger,
 	}
