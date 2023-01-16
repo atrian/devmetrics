@@ -23,19 +23,19 @@ var (
 
 // Config конфигурация сервера приема метрик
 type Config struct {
-	Server ServerConfig
 	HTTP   HTTPConfig
 	logger logger.Logger
+	Server ServerConfig
 }
 
 // ServerConfig основная конфигурация сервера для хранения метрик
 type ServerConfig struct {
-	StoreInterval      time.Duration `env:"STORE_INTERVAL"` // StoreInterval интервал сохранения накопленных метрик в файл на диске, по умолчанию раз в 5 минут
-	StoreFile          string        `env:"STORE_FILE"`     // StoreFile файл для сохранения накопленных метрик на диске
-	Restore            bool          `env:"RESTORE"`        // Restore флаг периодического сброса накопленных метрик в файл на диск
+	StoreFile          string        `env:"STORE_FILE"` // StoreFile файл для сохранения накопленных метрик на диске
 	MetricTemplateFile string        // MetricTemplateFile шаблон вывода метрик в HTML формате
-	HashKey            string        `env:"KEY"`          // HashKey ключ для проверки подписи метрик
-	DBDSN              string        `env:"DATABASE_DSN"` // DBDSN строка соединения с базой данных (PGSQL)
+	HashKey            string        `env:"KEY"`            // HashKey ключ для проверки подписи метрик
+	DBDSN              string        `env:"DATABASE_DSN"`   // DBDSN строка соединения с базой данных (PGSQL)
+	StoreInterval      time.Duration `env:"STORE_INTERVAL"` // StoreInterval интервал сохранения накопленных метрик в файл на диске, по умолчанию раз в 5 минут
+	Restore            bool          `env:"RESTORE"`        // Restore флаг периодического сброса накопленных метрик в файл на диск
 	ProfileApp         bool          // ProfileApp флаг разрешающий маршруты для просмотра профиля pprof приложения
 }
 

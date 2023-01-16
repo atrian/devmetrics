@@ -27,7 +27,10 @@ func (h *Handler) GetMetric() http.HandlerFunc {
 		case "gauge":
 			if metricValue, exist := h.storage.GetGauge(metricTitle); exist {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf("%v", metricValue)))
+				_, err := fmt.Fprintf(w, "%v", metricValue)
+				if err != nil {
+					http.Error(w, "Can't write metric value", http.StatusInternalServerError)
+				}
 				return
 			} else {
 				http.Error(w, "gauge not found", http.StatusNotFound)
@@ -37,7 +40,10 @@ func (h *Handler) GetMetric() http.HandlerFunc {
 		case "counter":
 			if metricValue, exist := h.storage.GetCounter(metricTitle); exist {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf("%v", metricValue)))
+				_, err := fmt.Fprintf(w, "%v", metricValue)
+				if err != nil {
+					http.Error(w, "Can't write metric value", http.StatusInternalServerError)
+				}
 				return
 			} else {
 				http.Error(w, "counter not found", http.StatusNotFound)

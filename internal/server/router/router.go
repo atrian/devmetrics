@@ -15,9 +15,9 @@ type Router struct {
 
 // registerMiddlewares общие middlewares для всех маршрутов
 func registerMiddlewares(router *Router) {
-	router.Mux.Use(middleware.RequestID)
-	router.Mux.Use(middleware.Logger)
-	router.Mux.Use(middlewares.GzipHandle)
+	router.Use(middleware.RequestID)
+	router.Use(middleware.Logger)
+	router.Use(middlewares.GzipHandle)
 }
 
 // registerRoutes регистрация всех маршрутов бизнес логики приложения

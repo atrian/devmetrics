@@ -19,16 +19,17 @@ var (
 
 // Config конфигурация приложения отправки метрик
 type Config struct {
-	Agent  AgentConfig // Agent конфигурация параметров сбора и отправки
-	HTTP   HTTPConfig  // HTTP конфигурация транспорта
+	HTTP   HTTPConfig // HTTP конфигурация транспорта
 	logger logger.Logger
+	Agent  AgentConfig // Agent конфигурация параметров сбора и отправки
+
 }
 
 // AgentConfig конфигурация параметров сбора и отправки метрик
 type AgentConfig struct {
+	HashKey        string        `env:"KEY"`             // HashKey ключ подписи метрик. Если пустой - метрики не подписываются
 	PollInterval   time.Duration `env:"POLL_INTERVAL"`   // PollInterval интервал сбора метрик, по умолчанию 2 секунды
 	ReportInterval time.Duration `env:"REPORT_INTERVAL"` // ReportInterval интервал отправки метрик на сервер, по умолчанию 10 секунд
-	HashKey        string        `env:"KEY"`             // HashKey ключ подписи метрик. Если пустой - метрики не подписываются
 }
 
 // HTTPConfig конфигурация транспорта

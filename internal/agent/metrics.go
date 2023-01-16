@@ -67,9 +67,9 @@ func (sh *StatsHolder) updateGopsMemStat() {
 
 // GaugeMetric - структура для хранения данных метрики и функции извлечения актуальных показателей
 type GaugeMetric struct {
+	pullValue func(sh *StatsHolder) gauge // функция обновления данных
 	source    int                         // тип собираемой метрики, RuntimeMetric | GopsMetric | CPUMetric
 	value     gauge                       // текущее значение метрики
-	pullValue func(sh *StatsHolder) gauge // функция обновления данных
 }
 
 // getGaugeValue возвращает значение метрики в формате float64
@@ -79,8 +79,8 @@ func (g *GaugeMetric) getGaugeValue() float64 {
 
 // CounterMetric - структура для хранения данных счетчика и функция вычисления следующего значения
 type CounterMetric struct {
-	value              counter                        // текущее значение счетчика
 	calculateNextValue func(c *CounterMetric) counter // функция обновления данных
+	value              counter                        // текущее значение счетчика
 }
 
 // getCounterValue возвращает значение метрики в формате int64
