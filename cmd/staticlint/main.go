@@ -7,8 +7,8 @@ import (
 )
 
 func main() {
-	m := staticlint.NewCheckerOptions()
+	linter := staticlint.NewCheckerOptionsWithAllRules()
 
 	// запускаем мультичекер со своим набором правил
-	multichecker.Main(m.GetRules()...)
+	multichecker.Main(linter.GetRules()...)
 }

@@ -50,10 +50,13 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unusedwrite"
 	"golang.org/x/tools/go/analysis/passes/usesgenerics"
 
+	"github.com/kisielk/errcheck/errcheck"
 	"honnef.co/go/tools/analysis/lint"
 	"honnef.co/go/tools/quickfix"
 	"honnef.co/go/tools/simple"
 	"honnef.co/go/tools/staticcheck"
+
+	"github.com/atrian/devmetrics/internal/staticlint/analyzers/exit"
 )
 
 // CheckerOptions структура для хранения набора подключенных стат.анализаторов кода
@@ -61,8 +64,8 @@ type CheckerOptions struct {
 	rules []*analysis.Analyzer
 }
 
-// NewCheckerOptions возвращает структура с подготовленным набором анализаторов согласно ТЗ
-func NewCheckerOptions() *CheckerOptions {
+// NewCheckerOptionsWithAllRules возвращает структура с подготовленным набором анализаторов согласно ТЗ
+func NewCheckerOptionsWithAllRules() *CheckerOptions {
 	co := CheckerOptions{}
 
 	// загружаем все анализаторы
@@ -154,7 +157,7 @@ func (co *CheckerOptions) AddSStaticCheckIORules() *CheckerOptions {
 
 // AddQStaticCheckIORules добавление статических анализаторов класса Q пакета
 // honnef.co/go/tools/cmd/staticcheck. Подробная информация об анализаторах
-// https://staticcheck.io/docs/checks/#S
+// https://staticcheck.io/docs/checks/#QF
 func (co *CheckerOptions) AddQStaticCheckIORules() *CheckerOptions {
 	// добавляем новые правила проверки
 	co.AddCheckerRules(convertStaticCheckAnalyzer(quickfix.Analyzers))
@@ -162,14 +165,23 @@ func (co *CheckerOptions) AddQStaticCheckIORules() *CheckerOptions {
 	return co
 }
 
+// AddExternalCheckerRules добавляет внешние проверки:
+// errcheck is a program for checking for unchecked errors in go programs
+// https://github.com/kisielk/errcheck
 func (co *CheckerOptions) AddExternalCheckerRules() *CheckerOptions {
-	//TODO любой внешний чекер
+	co.AddCheckerRules([]*analysis.Analyzer{errcheck.Analyzer})
 	return co
 }
 
+// AddCustomCheckerRules анализатор запрезает использование os.Exit в функции main пакета main.
 func (co *CheckerOptions) AddCustomCheckerRules() *CheckerOptions {
-	//TODO свой чекер на os.exit
+	co.AddCheckerRules([]*analysis.Analyzer{exit.Analyzer})
 	return co
+}
+
+// GetRules возвращает слайс со всеми зарегистриррованными анализаторами
+func (co *CheckerOptions) GetRules() []*analysis.Analyzer {
+	return co.rules
 }
 
 // convertStaticCheckAnalyzer приводит слайс анализаторов пакета honnef.co/go/tools/cmd/staticcheck
@@ -184,9 +196,4 @@ func convertStaticCheckAnalyzer(analyzers []*lint.Analyzer) []*analysis.Analyzer
 	}
 
 	return rules
-}
-
-// GetRules возвращает слайс со всеми зарегистриррованными анализаторами
-func (co *CheckerOptions) GetRules() []*analysis.Analyzer {
-	return co.rules
 }
