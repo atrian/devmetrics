@@ -46,5 +46,8 @@ func (z ZapLogger) Debug(message string) {
 }
 
 func (z ZapLogger) Sync() {
-	z.logger.Sync()
+	err := z.logger.Sync()
+	if err != nil {
+		log.Print(err)
+	}
 }

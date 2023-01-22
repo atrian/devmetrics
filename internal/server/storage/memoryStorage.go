@@ -93,7 +93,12 @@ func (s *MemoryStorage) DumpToFile(filename string) error {
 		s.logger.Error("NewMetricWriter error", err)
 	}
 
-	defer metricWriter.Close()
+	defer func(metricWriter *MetricWriter) {
+		mwErr := metricWriter.Close()
+		if mwErr != nil {
+			s.logger.Error("DumpToFile metricWriter.Close error", mwErr)
+		}
+	}(metricWriter)
 
 	metricsDTO := make([]dto.Metrics, 0, len(s.metrics.GaugeDict)+len(s.metrics.GaugeDict))
 

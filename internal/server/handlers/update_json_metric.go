@@ -40,7 +40,10 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 				http.Error(w, "Cant validate metric", http.StatusBadRequest)
 			}
 
-			h.storage.StoreGauge(metric.ID, *metric.Value)
+			sgErr := h.storage.StoreGauge(metric.ID, *metric.Value)
+			if sgErr != nil {
+				h.logger.Error("StoreGauge err", sgErr)
+			}
 			currentValue, _ := h.storage.GetGauge(metric.ID)
 			metric.Value = &currentValue
 		case "counter":
@@ -50,7 +53,10 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 				http.Error(w, "Cant validate metric", http.StatusBadRequest)
 			}
 
-			h.storage.StoreCounter(metric.ID, *metric.Delta)
+			scErr := h.storage.StoreCounter(metric.ID, *metric.Delta)
+			if scErr != nil {
+				h.logger.Error("StoreCounter err", scErr)
+			}
 			currentValue, _ := h.storage.GetCounter(metric.ID)
 			metric.Delta = &currentValue
 		default:
@@ -62,7 +68,10 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		h.logger.Debug(fmt.Sprintf("Request OK. metric %#v", metric))
-		json.NewEncoder(w).Encode(metric)
+		err = json.NewEncoder(w).Encode(metric)
+		if err != nil {
+			h.logger.Error("json.NewEncoder err", err)
+		}
 	}
 }
 

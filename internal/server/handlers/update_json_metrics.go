@@ -117,7 +117,10 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 			Updated: responseMetrics,
 		}
 
-		json.NewEncoder(w).Encode(response)
+		jeErr := json.NewEncoder(w).Encode(response)
+		if jeErr != nil {
+			h.logger.Error("json.NewEncoder err", jeErr)
+		}
 	}
 }
 

@@ -34,6 +34,7 @@ require (
 	github.com/jackc/pgtype v1.12.0 // indirect
 	github.com/jackc/puddle v1.3.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/kisielk/errcheck v1.6.3 // indirect
 	github.com/lib/pq v1.10.2 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect

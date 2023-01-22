@@ -23,6 +23,9 @@ func (h *Handler) GetMetrics() http.HandlerFunc {
 
 		w.Header().Set("content-type", "text/html")
 		w.WriteHeader(http.StatusOK)
-		html.Execute(w, h.storage.GetMetrics())
+		htmlErr := html.Execute(w, h.storage.GetMetrics())
+		if htmlErr != nil {
+			h.logger.Error("html.Execute error", htmlErr)
+		}
 	}
 }

@@ -89,7 +89,10 @@ func (a *Agent) RunProfiler() {
 
 	a.logger.Info(fmt.Sprintf("Profiler started @ %v", listener.Addr()))
 
-	http.Serve(listener, nil)
+	profilerErr := http.Serve(listener, nil)
+	if profilerErr != nil {
+		a.logger.Error("Can't start profiler server", profilerErr)
+	}
 }
 
 // RefreshRuntimeStats обновление метрик из пакета runtime (runtime.MemStats)

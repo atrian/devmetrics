@@ -45,7 +45,10 @@ func (h *Handler) GetJSONMetric() http.HandlerFunc {
 				}
 
 				w.WriteHeader(http.StatusOK)
-				w.Write(JSONMetric)
+				_, wErr := w.Write(JSONMetric)
+				if wErr != nil {
+					http.Error(w, wErr.Error(), http.StatusInternalServerError)
+				}
 				return
 			} else {
 				http.Error(w, "gauge not found", http.StatusNotFound)
@@ -69,7 +72,10 @@ func (h *Handler) GetJSONMetric() http.HandlerFunc {
 				}
 
 				w.WriteHeader(http.StatusOK)
-				w.Write(JSONMetric)
+				_, wErr := w.Write(JSONMetric)
+				if wErr != nil {
+					http.Error(w, wErr.Error(), http.StatusInternalServerError)
+				}
 				return
 			} else {
 				http.Error(w, "counter not found", http.StatusNotFound)
