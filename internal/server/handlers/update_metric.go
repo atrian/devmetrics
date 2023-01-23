@@ -10,17 +10,18 @@ import (
 )
 
 // UpdateMetric обновление метрик POST /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
-// @Tags Metrics
-// @Summary Запрос одной метрики с указанием её типа и имени
-// @Produce html
-// @Param metric_type path string true "Тип метрики: counter, gauge"
-// @Param metric_name path string true "Имя метрики"
-// @Param value path number true "Значение метрики"
-// @Success 200 {number} number "Текущее значение метрики"
-// @Failure 400
-// @Failure 404
-// @Failure 500
-// @Router /value/{metric_type}/{metric_name}/{value} [get]
+//
+//	@Tags Metrics
+//	@Summary Запрос одной метрики с указанием её типа и имени
+//	@Produce html
+//	@Param metric_type path string true "Тип метрики: counter, gauge"
+//	@Param metric_name path string true "Имя метрики"
+//	@Param value path number true "Значение метрики"
+//	@Success 200 {number} number "Текущее значение метрики"
+//	@Failure 400
+//	@Failure 404
+//	@Failure 500
+//	@Router /value/{metric_type}/{metric_name}/{value} [get]
 func (h *Handler) UpdateMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		badRequestFlag := false
