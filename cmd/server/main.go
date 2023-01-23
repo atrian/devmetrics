@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/atrian/devmetrics/internal/server"
 )
 
@@ -17,7 +19,17 @@ import (
 // @Tag.name Metrics
 // @Tag.description "Группа для работы с данными метрик"
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
 func main() {
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
+
 	statServer := server.NewServer()
 	statServer.Run()
 }
