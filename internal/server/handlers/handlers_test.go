@@ -24,7 +24,7 @@ type HandlersTestSuite struct {
 	config  *serverconfig.Config
 	storage storage.IRepository
 	router  *router.Router
-	logger  logger.ILogger
+	logger  logger.Logger
 }
 
 func (suite *HandlersTestSuite) SetupSuite() {
@@ -116,7 +116,12 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (int, s
 	respBody, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		bcErr := Body.Close()
+		if bcErr != nil {
+			return
+		}
+	}(resp.Body)
 	return resp.StatusCode, string(respBody)
 }
 
@@ -134,12 +139,20 @@ func ExampleHandler_UpdateMetric() {
 	// Запрос отправляется на Endpoint /update/counter/PollCount/3 POST методом
 	endpoint := testServer.URL + "/update/counter/PollCount/3"
 
-	request, _ := http.NewRequest(http.MethodPost, endpoint, nil)
+	request, rErr := http.NewRequest(http.MethodPost, endpoint, nil)
+	if rErr != nil {
+		appLogger.Error("http.NewRequest err", rErr)
+	}
 	response, respErr := http.DefaultClient.Do(request)
 	if respErr != nil {
 		appLogger.Fatal("http.DefaultClient.Do error", respErr)
 	}
-	defer response.Body.Close()
+	defer func(Body io.ReadCloser) {
+		cErr := Body.Close()
+		if cErr != nil {
+			return
+		}
+	}(response.Body)
 
 	responseBody, _ := io.ReadAll(response.Body)
 
@@ -173,7 +186,12 @@ func ExampleHandler_UpdateJSONMetrics() {
 	if respErr != nil {
 		appLogger.Fatal("http.DefaultClient.Do error", respErr)
 	}
-	defer response.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(response.Body)
 
 	responseBody, _ := io.ReadAll(response.Body)
 
@@ -203,12 +221,18 @@ func ExampleHandler_GetJSONMetric() {
 	// на Endpoint /updates/ POST методом. В теле передается JSON с метриками
 	endpoint := testServer.URL + "/updates/"
 
-	request, _ := http.NewRequest(http.MethodPost, endpoint, metricsReader)
+	request, rErr := http.NewRequest(http.MethodPost, endpoint, metricsReader)
+	if rErr != nil {
+		appLogger.Error("http.NewRequest err", rErr)
+	}
 	response, respErr := http.DefaultClient.Do(request)
 	if respErr != nil {
 		appLogger.Fatal("http.DefaultClient.Do error", respErr)
 	}
-	response.Body.Close()
+	err := response.Body.Close()
+	if err != nil {
+		return
+	}
 
 	// Делаем запрос нужной метрики
 	// на Endpoint /value/ POST методом
@@ -219,12 +243,20 @@ func ExampleHandler_GetJSONMetric() {
 	metricReader := strings.NewReader(weWant)
 
 	endpoint = testServer.URL + "/value/"
-	request, _ = http.NewRequest(http.MethodPost, endpoint, metricReader)
+	request, rErr = http.NewRequest(http.MethodPost, endpoint, metricReader)
+	if rErr != nil {
+		appLogger.Error("http.NewRequest error", rErr)
+	}
 	response, respErr = http.DefaultClient.Do(request)
 	if respErr != nil {
 		appLogger.Fatal("http.DefaultClient.Do error", respErr)
 	}
-	defer response.Body.Close()
+	defer func(Body io.ReadCloser) {
+		cErr := Body.Close()
+		if cErr != nil {
+			return
+		}
+	}(response.Body)
 
 	responseBody, _ := io.ReadAll(response.Body)
 
@@ -254,12 +286,18 @@ func ExampleHandler_GetMetric() {
 	// на Endpoint /updates/ POST методом. В теле передается JSON с метриками
 	endpoint := testServer.URL + "/updates/"
 
-	request, _ := http.NewRequest(http.MethodPost, endpoint, metricsReader)
+	request, rErr := http.NewRequest(http.MethodPost, endpoint, metricsReader)
+	if rErr != nil {
+		appLogger.Error("http.NewRequest error", rErr)
+	}
 	response, respErr := http.DefaultClient.Do(request)
 	if respErr != nil {
 		appLogger.Fatal("http.DefaultClient.Do error", respErr)
 	}
-	response.Body.Close()
+	err := response.Body.Close()
+	if err != nil {
+		return
+	}
 
 	// Делаем запрос нужной метрики
 	// на Endpoint /value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ> GET методом
@@ -269,12 +307,20 @@ func ExampleHandler_GetMetric() {
 	metricReader := strings.NewReader(weWant)
 
 	endpoint = testServer.URL + "/value/gauge/YourGauge"
-	request, _ = http.NewRequest(http.MethodGet, endpoint, metricReader)
+	request, rErr = http.NewRequest(http.MethodGet, endpoint, metricReader)
+	if rErr != nil {
+		appLogger.Error("http.NewRequest error", rErr)
+	}
 	response, respErr = http.DefaultClient.Do(request)
 	if respErr != nil {
 		appLogger.Fatal("http.DefaultClient.Do error", respErr)
 	}
-	defer response.Body.Close()
+	defer func(Body io.ReadCloser) {
+		cErr := Body.Close()
+		if cErr != nil {
+			return
+		}
+	}(response.Body)
 
 	responseBody, _ := io.ReadAll(response.Body)
 
@@ -303,12 +349,20 @@ func ExampleHandler_UpdateJSONMetric() {
 	// Запрос отправляется на Endpoint /update/ POST методом. В теле передается JSON с метрикой
 	endpoint := testServer.URL + "/update/"
 
-	request, _ := http.NewRequest(http.MethodPost, endpoint, metricReader)
+	request, rErr := http.NewRequest(http.MethodPost, endpoint, metricReader)
+	if rErr != nil {
+		appLogger.Error("http.NewRequest error", rErr)
+	}
 	response, respErr := http.DefaultClient.Do(request)
 	if respErr != nil {
 		appLogger.Fatal("http.DefaultClient.Do error", respErr)
 	}
-	defer response.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(response.Body)
 
 	responseBody, _ := io.ReadAll(response.Body)
 

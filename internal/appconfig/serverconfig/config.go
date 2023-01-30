@@ -1,3 +1,5 @@
+// Package serverconfig Конфигурация сервера хранения метрик.
+// Содержит адрес сервера, dsn соединения с БД, ключ для проверки цифровых подписей метрик, флаг профилирования
 package serverconfig
 
 import (
@@ -21,19 +23,19 @@ var (
 
 // Config конфигурация сервера приема метрик
 type Config struct {
-	Server ServerConfig
 	HTTP   HTTPConfig
-	logger logger.ILogger
+	logger logger.Logger
+	Server ServerConfig
 }
 
 // ServerConfig основная конфигурация сервера для хранения метрик
 type ServerConfig struct {
-	StoreInterval      time.Duration `env:"STORE_INTERVAL"` // StoreInterval интервал сохранения накопленных метрик в файл на диске, по умолчанию раз в 5 минут
-	StoreFile          string        `env:"STORE_FILE"`     // StoreFile файл для сохранения накопленных метрик на диске
-	Restore            bool          `env:"RESTORE"`        // Restore флаг периодического сброса накопленных метрик в файл на диск
+	StoreFile          string        `env:"STORE_FILE"` // StoreFile файл для сохранения накопленных метрик на диске
 	MetricTemplateFile string        // MetricTemplateFile шаблон вывода метрик в HTML формате
-	HashKey            string        `env:"KEY"`          // HashKey ключ для проверки подписи метрик
-	DBDSN              string        `env:"DATABASE_DSN"` // DBDSN строка соединения с базой данных (PGSQL)
+	HashKey            string        `env:"KEY"`            // HashKey ключ для проверки подписи метрик
+	DBDSN              string        `env:"DATABASE_DSN"`   // DBDSN строка соединения с базой данных (PGSQL)
+	StoreInterval      time.Duration `env:"STORE_INTERVAL"` // StoreInterval интервал сохранения накопленных метрик в файл на диске, по умолчанию раз в 5 минут
+	Restore            bool          `env:"RESTORE"`        // Restore флаг периодического сброса накопленных метрик в файл на диск
 	ProfileApp         bool          // ProfileApp флаг разрешающий маршруты для просмотра профиля pprof приложения
 }
 
@@ -45,7 +47,7 @@ type HTTPConfig struct {
 
 // NewServerConfig собирает конфигурацию из значений по умолчанию, переданных флагов и переменных окружения
 // приоритет по возрастанию: умолчание > флаги > переменные среды
-func NewServerConfig(logger logger.ILogger) *Config {
+func NewServerConfig(logger logger.Logger) *Config {
 	conf := Config{
 		logger: logger,
 	}
@@ -59,7 +61,8 @@ func NewServerConfig(logger logger.ILogger) *Config {
 // NewServerConfigWithoutFlags собирает конфигурацию из значений по умолчанию и переменных окружения
 // приоритет по возрастанию: умолчание > переменные среды
 // используется для тестирования
-func NewServerConfigWithoutFlags(logger logger.ILogger) *Config {
+// TODO - удалить метод, переписать тесты
+func NewServerConfigWithoutFlags(logger logger.Logger) *Config {
 	conf := Config{
 		logger: logger,
 	}

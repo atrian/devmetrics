@@ -1,3 +1,4 @@
+// Package handlers Хендлеры сервиса, см. документацию в Swagger
 package handlers
 
 import (
@@ -10,11 +11,11 @@ import (
 type Handler struct {
 	storage storage.IRepository
 	config  *serverconfig.Config
-	hasher  crypto.IHasher
-	logger  logger.ILogger
+	hasher  crypto.Hasher
+	logger  logger.Logger
 }
 
-func New(config *serverconfig.Config, storage storage.IRepository, logger logger.ILogger) *Handler {
+func New(config *serverconfig.Config, storage storage.IRepository, logger logger.Logger) *Handler {
 	h := &Handler{
 		storage: storage,
 		config:  config,

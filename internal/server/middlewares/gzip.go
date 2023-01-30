@@ -1,3 +1,5 @@
+// Package middlewares пакет с пользовательскими посредниками для запроса.
+// Содержит реализацию Gzip сжатия см. GzipHandle
 package middlewares
 
 import (
@@ -30,10 +32,18 @@ func GzipHandle(next http.Handler) http.Handler {
 		// создаём gzip.Writer поверх текущего w
 		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
 		if err != nil {
-			io.WriteString(w, err.Error())
+			_, ioErr := io.WriteString(w, err.Error())
+			if ioErr != nil {
+				return
+			}
 			return
 		}
-		defer gz.Close()
+		defer func(gz *gzip.Writer) {
+			cErr := gz.Close()
+			if cErr != nil {
+				return
+			}
+		}(gz)
 
 		w.Header().Set("Content-Encoding", "gzip")
 		// передаём обработчику страницы переменную типа gzipWriter для вывода данных

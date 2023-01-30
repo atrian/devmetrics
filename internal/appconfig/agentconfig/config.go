@@ -1,3 +1,5 @@
+// Package agentconfig Конфигурация агента сборщика метрик.
+// Содержит интервалы сборки и отправки, адрес сервера, ключ для цифровой подписи метрик
 package agentconfig
 
 import (
@@ -17,16 +19,17 @@ var (
 
 // Config конфигурация приложения отправки метрик
 type Config struct {
+	HTTP   HTTPConfig // HTTP конфигурация транспорта
+	logger logger.Logger
 	Agent  AgentConfig // Agent конфигурация параметров сбора и отправки
-	HTTP   HTTPConfig  // HTTP конфигурация транспорта
-	logger logger.ILogger
+
 }
 
 // AgentConfig конфигурация параметров сбора и отправки метрик
 type AgentConfig struct {
+	HashKey        string        `env:"KEY"`             // HashKey ключ подписи метрик. Если пустой - метрики не подписываются
 	PollInterval   time.Duration `env:"POLL_INTERVAL"`   // PollInterval интервал сбора метрик, по умолчанию 2 секунды
 	ReportInterval time.Duration `env:"REPORT_INTERVAL"` // ReportInterval интервал отправки метрик на сервер, по умолчанию 10 секунд
-	HashKey        string        `env:"KEY"`             // HashKey ключ подписи метрик. Если пустой - метрики не подписываются
 }
 
 // HTTPConfig конфигурация транспорта
@@ -39,7 +42,7 @@ type HTTPConfig struct {
 
 // NewConfig собирает конфигурацию из значений по умолчанию, переданных флагов и переменных окружения
 // приоритет по возрастанию: умолчание > флаги > переменные среды
-func NewConfig(logger logger.ILogger) *Config {
+func NewConfig(logger logger.Logger) *Config {
 	config := Config{
 		logger: logger,
 	}

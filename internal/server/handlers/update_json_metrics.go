@@ -12,16 +12,17 @@ import (
 )
 
 // UpdateJSONMetrics обновление метрик POST /updates/ в JSON
-// @Tags Metrics
-// @Summary Массовое обновление данных метрик с передачей данных в JSON формате
-// @Accept  json
-// @Produce json
-// @Param metrics body []dto.Metrics true "Принимает JSON массивом метрик, возвращает JSON с обновленными данными"
-// @Success 200 {array} dto.Metrics
-// @Failure 400 {string} string ""
-// @Failure 404 {string} string ""
-// @Failure 500 {string} string ""
-// @Router /updates/ [post]
+//
+//	@Tags Metrics
+//	@Summary Массовое обновление данных метрик с передачей данных в JSON формате
+//	@Accept  json
+//	@Produce json
+//	@Param metrics body []dto.Metrics true "Принимает JSON массивом метрик, возвращает JSON с обновленными данными"
+//	@Success 200 {array} dto.Metrics
+//	@Failure 400 {string} string ""
+//	@Failure 404 {string} string ""
+//	@Failure 500 {string} string ""
+//	@Router /updates/ [post]
 func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// список уникальных метрик в запросе
@@ -117,7 +118,10 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 			Updated: responseMetrics,
 		}
 
-		json.NewEncoder(w).Encode(response)
+		jeErr := json.NewEncoder(w).Encode(response)
+		if jeErr != nil {
+			h.logger.Error("json.NewEncoder err", jeErr)
+		}
 	}
 }
 

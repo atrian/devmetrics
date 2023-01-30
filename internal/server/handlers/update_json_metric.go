@@ -10,16 +10,17 @@ import (
 )
 
 // UpdateJSONMetric обновление метрик POST /update/ в JSON
-// @Tags Metrics
-// @Summary Обновление одной метрики с передачей данных в JSON формате
-// @Accept  json
-// @Produce json
-// @Param metric body dto.Metrics true "Принимает JSON с данными метрики, возвращает JSON с обновленными данными"
-// @Success 200 {object} dto.Metrics
-// @Failure 400 {string} string ""
-// @Failure 404 {string} string ""
-// @Failure 500 {string} string ""
-// @Router /update/ [post]
+//
+//	@Tags Metrics
+//	@Summary Обновление одной метрики с передачей данных в JSON формате
+//	@Accept  json
+//	@Produce json
+//	@Param metric body dto.Metrics true "Принимает JSON с данными метрики, возвращает JSON с обновленными данными"
+//	@Success 200 {object} dto.Metrics
+//	@Failure 400 {string} string ""
+//	@Failure 404 {string} string ""
+//	@Failure 500 {string} string ""
+//	@Router /update/ [post]
 func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		metric, err := h.unmarshallMetric(r.Body)
@@ -37,7 +38,10 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 				http.Error(w, "Cant validate metric", http.StatusBadRequest)
 			}
 
-			h.storage.StoreGauge(metric.ID, *metric.Value)
+			sgErr := h.storage.StoreGauge(metric.ID, *metric.Value)
+			if sgErr != nil {
+				h.logger.Error("StoreGauge err", sgErr)
+			}
 			currentValue, _ := h.storage.GetGauge(metric.ID)
 			metric.Value = &currentValue
 		case "counter":
@@ -47,7 +51,10 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 				http.Error(w, "Cant validate metric", http.StatusBadRequest)
 			}
 
-			h.storage.StoreCounter(metric.ID, *metric.Delta)
+			scErr := h.storage.StoreCounter(metric.ID, *metric.Delta)
+			if scErr != nil {
+				h.logger.Error("StoreCounter err", scErr)
+			}
 			currentValue, _ := h.storage.GetCounter(metric.ID)
 			metric.Delta = &currentValue
 		default:
@@ -59,7 +66,10 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		h.logger.Debug(fmt.Sprintf("Request OK. metric %#v", metric))
-		json.NewEncoder(w).Encode(metric)
+		err = json.NewEncoder(w).Encode(metric)
+		if err != nil {
+			h.logger.Error("json.NewEncoder err", err)
+		}
 	}
 }
 

@@ -15,14 +15,14 @@ import (
 type MemoryStorage struct {
 	metrics     *MetricsDicts
 	config      *serverconfig.Config
-	logger      logger.ILogger
+	logger      logger.Logger
 	silentStore bool
 }
 
 var _ IRepository = (*MemoryStorage)(nil)
 
 // NewMemoryStorage возвращает указатель на In Memory хранилище со всеми зависимостями
-func NewMemoryStorage(config *serverconfig.Config, logger logger.ILogger) *MemoryStorage {
+func NewMemoryStorage(config *serverconfig.Config, logger logger.Logger) *MemoryStorage {
 	storage := MemoryStorage{
 		metrics: NewMetricsDicts(),
 		config:  config,
@@ -93,7 +93,12 @@ func (s *MemoryStorage) DumpToFile(filename string) error {
 		s.logger.Error("NewMetricWriter error", err)
 	}
 
-	defer metricWriter.Close()
+	defer func(metricWriter *MetricWriter) {
+		mwErr := metricWriter.Close()
+		if mwErr != nil {
+			s.logger.Error("DumpToFile metricWriter.Close error", mwErr)
+		}
+	}(metricWriter)
 
 	metricsDTO := make([]dto.Metrics, 0, len(s.metrics.GaugeDict)+len(s.metrics.GaugeDict))
 

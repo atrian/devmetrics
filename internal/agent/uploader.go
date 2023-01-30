@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
@@ -17,13 +18,13 @@ import (
 type Uploader struct {
 	client *http.Client
 	config *agentconfig.Config // config конфигурация приложения
-	hasher crypto.IHasher      // hasher подпись метрик
-	logger logger.ILogger
+	hasher crypto.Hasher       // hasher подпись метрик
+	logger logger.Logger
 }
 
 // NewUploader принимает конфигурацию и логгер, подключает зависимости:
 // crypto.Sha256Hasher, http.Client
-func NewUploader(config *agentconfig.Config, logger logger.ILogger) *Uploader {
+func NewUploader(config *agentconfig.Config, logger logger.Logger) *Uploader {
 	uploader := Uploader{
 		client: &http.Client{},
 		config: config,
@@ -121,7 +122,12 @@ func (uploader *Uploader) sendRequest(body []byte) {
 	}
 
 	if resp != nil {
-		defer resp.Body.Close()
+		defer func(Body io.ReadCloser) {
+			bcErr := Body.Close()
+			if bcErr != nil {
+				uploader.logger.Error("sendRequest Body.Close error", bcErr)
+			}
+		}(resp.Body)
 	}
 }
 
@@ -163,7 +169,12 @@ func (uploader *Uploader) sendGzippedRequest(body []byte) {
 	}
 
 	if resp != nil {
-		defer resp.Body.Close()
+		defer func(Body io.ReadCloser) {
+			bcErr := Body.Close()
+			if bcErr != nil {
+				uploader.logger.Error("sendGzippedRequest Body.Close error", err)
+			}
+		}(resp.Body)
 	}
 }
 

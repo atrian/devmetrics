@@ -25,7 +25,7 @@ const (
 type MetricsDics struct {
 	GaugeDict   map[string]*GaugeMetric   // GaugeDict мапа для хранения метрик
 	CounterDict map[string]*CounterMetric // CounterDict мапа для хранения счетчиков
-	logger      logger.ILogger
+	logger      logger.Logger
 	mu          sync.RWMutex
 }
 
@@ -67,9 +67,9 @@ func (sh *StatsHolder) updateGopsMemStat() {
 
 // GaugeMetric - структура для хранения данных метрики и функции извлечения актуальных показателей
 type GaugeMetric struct {
+	pullValue func(sh *StatsHolder) gauge // функция обновления данных
 	source    int                         // тип собираемой метрики, RuntimeMetric | GopsMetric | CPUMetric
 	value     gauge                       // текущее значение метрики
-	pullValue func(sh *StatsHolder) gauge // функция обновления данных
 }
 
 // getGaugeValue возвращает значение метрики в формате float64
@@ -79,8 +79,8 @@ func (g *GaugeMetric) getGaugeValue() float64 {
 
 // CounterMetric - структура для хранения данных счетчика и функция вычисления следующего значения
 type CounterMetric struct {
-	value              counter                        // текущее значение счетчика
 	calculateNextValue func(c *CounterMetric) counter // функция обновления данных
+	value              counter                        // текущее значение счетчика
 }
 
 // getCounterValue возвращает значение метрики в формате int64
@@ -90,7 +90,7 @@ func (c *CounterMetric) getCounterValue() int64 {
 
 // NewMetricsDicts инициализация хранилища собранных метрик и счетчиков
 // содержит список всех собираемых метрик и счетчиков а так же правила получения/обновления данных
-func NewMetricsDicts(logger logger.ILogger) *MetricsDics {
+func NewMetricsDicts(logger logger.Logger) *MetricsDics {
 	dict := MetricsDics{
 		GaugeDict: map[string]*GaugeMetric{
 			"Alloc": {pullValue: func(sh *StatsHolder) gauge {
