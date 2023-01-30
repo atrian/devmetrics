@@ -9,8 +9,8 @@ import (
 	"net/http"
 
 	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
-	"github.com/atrian/devmetrics/internal/crypto"
 	"github.com/atrian/devmetrics/internal/dto"
+	"github.com/atrian/devmetrics/internal/signature"
 	"github.com/atrian/devmetrics/pkg/logger"
 )
 
@@ -18,7 +18,7 @@ import (
 type Uploader struct {
 	client *http.Client
 	config *agentconfig.Config // config конфигурация приложения
-	hasher crypto.Hasher       // hasher подпись метрик
+	hasher signature.Hasher    // hasher подпись метрик
 	logger logger.Logger
 }
 
@@ -28,7 +28,7 @@ func NewUploader(config *agentconfig.Config, logger logger.Logger) *Uploader {
 	uploader := Uploader{
 		client: &http.Client{},
 		config: config,
-		hasher: crypto.NewSha256Hasher(),
+		hasher: signature.NewSha256Hasher(),
 		logger: logger,
 	}
 	return &uploader
