@@ -10,48 +10,76 @@ import (
 	"os"
 )
 
-var _ Crypter = (*CertManager)(nil)
+var _ Crypter = (*KeyManager)(nil)
 
-type CertManager struct {
+type KeyManager struct {
+	PrivateKey *rsa.PrivateKey
+	PublicKey  *rsa.PublicKey
 }
 
-func (c CertManager) ReadPrivateKey(keyPath string) (*rsa.PrivateKey, error) {
+func New() *KeyManager {
+	km := KeyManager{}
+	return &km
+}
+
+// ReadPrivateKey читает приватный ключ с диска, возвращает указатель на структуру rsa.PrivateKey
+// использует ParsePrivateKey для парсинга ключа
+func (k *KeyManager) ReadPrivateKey(keyPath string) (*rsa.PrivateKey, error) {
 	// получаем данные из файла
 	data, err := os.ReadFile(keyPath)
 	if err != nil {
 		return nil, err
 	}
 
+	cert, err := k.ParsePrivateKey(data)
+	// возвращаем готовый к работе ключ
+	return cert, err
+}
+
+// ParsePrivateKey парсит приватный ключ из слайса байт, возвращает возвращает указатель на rsa.PrivateKey
+func (k *KeyManager) ParsePrivateKey(key []byte) (*rsa.PrivateKey, error) {
 	// парсим закрытый ключ
-	block, _ := pem.Decode(data)
+	block, _ := pem.Decode(key)
 	cert, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	// возвращаем готовый к работе ключ
 	return cert, err
 }
 
-func (c CertManager) ReadPublicKey(keyPath string) (*rsa.PublicKey, error) {
+// RememberPrivateKey кеширование приватного ключа
+func (k *KeyManager) RememberPrivateKey(key *rsa.PrivateKey) {
+	k.PrivateKey = key
+}
+
+// ReadPublicKey читает публичный ключ с диска, возвращает указатель на структуру rsa.PublicKey
+// использует ParsePublicKey для парсинга ключа
+func (k *KeyManager) ReadPublicKey(keyPath string) (*rsa.PublicKey, error) {
 	// получаем данные из файла
 	data, err := os.ReadFile(keyPath)
 	if err != nil {
 		return nil, err
 	}
 
-	// парсим публичный ключ
-	block, _ := pem.Decode(data)
-	cert, err := x509.ParsePKCS1PublicKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
+	cert, err := k.ParsePublicKey(data)
 	// возвращаем готовый к работе ключ
 	return cert, err
 }
 
-func (c CertManager) GenerateKeys() (publicKey []byte, privateKey []byte, err error) {
+// ParsePublicKey парсит публичный ключ из слайса байт, возвращает возвращает указатель на rsa.PublicKey
+func (k *KeyManager) ParsePublicKey(key []byte) (*rsa.PublicKey, error) {
+	// парсим публичный ключ
+	block, _ := pem.Decode(key)
+	cert, err := x509.ParsePKCS1PublicKey(block.Bytes)
+
+	return cert, err
+}
+
+// RememberPublicKey кеширование публичного ключа
+func (k *KeyManager) RememberPublicKey(key *rsa.PublicKey) {
+	k.PublicKey = key
+}
+
+// GenerateKeys генерирует пару приватного и публичного ключа длиной 4096 бит
+// возвращает тело []byte ключей в формате в формате PEM
+func (k *KeyManager) GenerateKeys() (publicKey []byte, privateKey []byte, err error) {
 	// создаём новый приватный RSA-ключ длиной 4096 бит
 	// для генерации ключей используется rand.Reader в качестве источника случайных данных
 	private, err := rsa.GenerateKey(rand.Reader, 4096)
@@ -79,10 +107,16 @@ func (c CertManager) GenerateKeys() (publicKey []byte, privateKey []byte, err er
 		return nil, nil, err
 	}
 
-	return publicKeyPEM.Bytes(), publicKeyPEM.Bytes(), nil
+	return publicKeyPEM.Bytes(), privateKeyPEM.Bytes(), nil
 }
 
-func (c CertManager) Encrypt(message []byte, key *rsa.PublicKey) ([]byte, error) {
+// Encrypt шифрует сообщение с кешированным публичным ключом
+func (k *KeyManager) Encrypt(message []byte) ([]byte, error) {
+	return k.EncryptWithKey(message, k.PublicKey)
+}
+
+// EncryptWithKey шифрует сообщение с предоставленным публичным ключом
+func (k *KeyManager) EncryptWithKey(message []byte, key *rsa.PublicKey) ([]byte, error) {
 	// OAEP is parameterised by a hash function that is used as a random oracle.
 	// Encryption and decryption of a given message must use the same hash function
 	// and sha256.New() is a reasonable choice.
@@ -96,7 +130,13 @@ func (c CertManager) Encrypt(message []byte, key *rsa.PublicKey) ([]byte, error)
 	return encryptedMessage, nil
 }
 
-func (c CertManager) Decrypt(message []byte, key *rsa.PrivateKey) ([]byte, error) {
+// Decrypt расшифровывает сообщение с кешированным приватным ключом
+func (k *KeyManager) Decrypt(message []byte) ([]byte, error) {
+	return k.DecryptWithKey(message, k.PrivateKey)
+}
+
+// DecryptWithKey расшифровывает сообщение с предоставленным приватным ключом
+func (k *KeyManager) DecryptWithKey(message []byte, key *rsa.PrivateKey) ([]byte, error) {
 	// OAEP is parameterised by a hash function that is used as a random oracle.
 	// Encryption and decryption of a given message must use the same hash function
 	// and sha256.New() is a reasonable choice.
