@@ -7,10 +7,22 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
+	"math"
 	"os"
 )
 
 var _ Crypter = (*KeyManager)(nil)
+
+const (
+	// MessageLenLimit = 512 (длинна ключа) - 2 * 32 -2 = 446
+	// По ограничениям см. rsa.EncryptOAEP
+	// k := pub.Size()
+	//	if len(msg) > k-2*hash.Size()-2 {
+	//		return nil, ErrMessageTooLong
+	//	}
+	MessageLenLimit    = 446
+	EncryptedBlockSize = 512
+)
 
 type KeyManager struct {
 	PrivateKey *rsa.PrivateKey
@@ -112,7 +124,30 @@ func (k *KeyManager) GenerateKeys() (publicKey []byte, privateKey []byte, err er
 
 // Encrypt шифрует сообщение с кешированным публичным ключом
 func (k *KeyManager) Encrypt(message []byte) ([]byte, error) {
-	return k.EncryptWithKey(message, k.PublicKey)
+	return k.EncryptBigMessage(message, k.PublicKey)
+}
+
+// EncryptBigMessage разбивает сообщение на чанки по размеру MessageLenLimit
+// шифрует и собирает зашифрованное сообщение целиком
+func (k *KeyManager) EncryptBigMessage(message []byte, key *rsa.PublicKey) ([]byte, error) {
+	chunks := int(math.Ceil(float64(len(message)) / MessageLenLimit))
+
+	result := make([]byte, 0, chunks*EncryptedBlockSize)
+	for i := 0; i < chunks*MessageLenLimit; i += MessageLenLimit {
+		chunkEnd := len(message)
+		if i+MessageLenLimit < chunkEnd {
+			chunkEnd = i + MessageLenLimit
+		}
+
+		encPart, err := k.EncryptWithKey(message[i:chunkEnd], key)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, encPart...)
+	}
+
+	return result, nil
 }
 
 // EncryptWithKey шифрует сообщение с предоставленным публичным ключом
@@ -121,6 +156,9 @@ func (k *KeyManager) EncryptWithKey(message []byte, key *rsa.PublicKey) ([]byte,
 	// Encryption and decryption of a given message must use the same hash function
 	// and sha256.New() is a reasonable choice.
 	hash := sha256.New()
+
+	size := hash.Size()
+	_ = size
 
 	encryptedMessage, err := rsa.EncryptOAEP(hash, rand.Reader, key, message, nil)
 	if err != nil {
@@ -132,7 +170,31 @@ func (k *KeyManager) EncryptWithKey(message []byte, key *rsa.PublicKey) ([]byte,
 
 // Decrypt расшифровывает сообщение с кешированным приватным ключом
 func (k *KeyManager) Decrypt(message []byte) ([]byte, error) {
-	return k.DecryptWithKey(message, k.PrivateKey)
+	return k.DecryptBigMessage(message, k.PrivateKey)
+}
+
+// DecryptBigMessage разбивает зашифрованное сообщение на чанки по размеру EncryptedBlockSize
+// расшифровывает и собирает расшифрованное сообщение целиком
+func (k *KeyManager) DecryptBigMessage(message []byte, key *rsa.PrivateKey) ([]byte, error) {
+	chunks := int(math.Ceil(float64(len(message)) / EncryptedBlockSize))
+
+	result := make([]byte, 0, len(message))
+
+	for i := 0; i < chunks*EncryptedBlockSize; i += EncryptedBlockSize {
+		chunkEnd := len(message)
+		if i+EncryptedBlockSize < chunkEnd {
+			chunkEnd = i + EncryptedBlockSize
+		}
+
+		decPart, err := k.DecryptWithKey(message[i:chunkEnd], key)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, decPart...)
+	}
+
+	return result, nil
 }
 
 // DecryptWithKey расшифровывает сообщение с предоставленным приватным ключом

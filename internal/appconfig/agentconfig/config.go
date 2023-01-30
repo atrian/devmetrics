@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	address, hashKey *string
-	reportInterval   *time.Duration
-	pollInterval     *time.Duration
+	address, hashKey, cryptoKey *string
+	reportInterval              *time.Duration
+	pollInterval                *time.Duration
 )
 
 // Config конфигурация приложения отправки метрик
@@ -27,6 +27,7 @@ type Config struct {
 
 // AgentConfig конфигурация параметров сбора и отправки метрик
 type AgentConfig struct {
+	CryptoKey      string        `env:"CRYPTO_KEY"`      // CryptoKey путь до файла с публичным ключом
 	HashKey        string        `env:"KEY"`             // HashKey ключ подписи метрик. Если пустой - метрики не подписываются
 	PollInterval   time.Duration `env:"POLL_INTERVAL"`   // PollInterval интервал сбора метрик, по умолчанию 2 секунды
 	ReportInterval time.Duration `env:"REPORT_INTERVAL"` // ReportInterval интервал отправки метрик на сервер, по умолчанию 10 секунд
@@ -76,6 +77,7 @@ func (config *Config) loadAgentFlags() {
 	reportInterval = flag.Duration("r", 10*time.Second, "Metrics upload interval in seconds.")
 	pollInterval = flag.Duration("p", 2*time.Second, "Metrics pool interval.")
 	hashKey = flag.String("k", "", "Key for metrics sign")
+	cryptoKey = flag.String("crypto-key", "", "Path to public PEM key")
 
 	flag.Parse()
 
@@ -83,6 +85,7 @@ func (config *Config) loadAgentFlags() {
 	config.Agent.ReportInterval = *reportInterval
 	config.Agent.PollInterval = *pollInterval
 	config.Agent.HashKey = *hashKey
+	config.Agent.CryptoKey = *cryptoKey
 }
 
 // loadAgentEnvConfiguration загрузка конфигурации переменных окружения
