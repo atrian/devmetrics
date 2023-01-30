@@ -13,7 +13,7 @@ import (
 type HandlersTestSuite struct {
 	suite.Suite
 	config  *serverconfig.Config
-	storage IRepository
+	storage Repository
 	logger  logger.Logger
 }
 

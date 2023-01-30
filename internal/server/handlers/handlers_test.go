@@ -22,7 +22,7 @@ import (
 type HandlersTestSuite struct {
 	suite.Suite
 	config  *serverconfig.Config
-	storage storage.IRepository
+	storage storage.Repository
 	router  *router.Router
 	logger  logger.Logger
 }

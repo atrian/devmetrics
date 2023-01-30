@@ -22,7 +22,7 @@ import (
 // Доступен профайлер при ProfileApp == true в serverconfig.ServerConfig
 type Server struct {
 	config  *serverconfig.Config
-	storage storage.IRepository
+	storage storage.Repository
 	logger  logger.Logger
 }
 
@@ -39,7 +39,7 @@ func NewServer() *Server {
 	config := serverconfig.NewServerConfig(serverLogger)
 
 	// подключаем storage
-	var appStorage storage.IRepository
+	var appStorage storage.Repository
 
 	if config.Server.DBDSN == "" {
 		serverLogger.Info("Loading memory storage")

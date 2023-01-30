@@ -28,7 +28,7 @@ type PgSQLStorage struct {
 	logger  logger.Logger
 }
 
-var _ IRepository = (*PgSQLStorage)(nil)
+var _ Repository = (*PgSQLStorage)(nil)
 
 // NewPgSQLStorage возвращает указатель на PgSQLStorage который сконфигурирован со всеми зависимостями
 // для работы с БД используется pgxpool

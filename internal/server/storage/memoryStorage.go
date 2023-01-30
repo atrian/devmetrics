@@ -19,7 +19,7 @@ type MemoryStorage struct {
 	silentStore bool
 }
 
-var _ IRepository = (*MemoryStorage)(nil)
+var _ Repository = (*MemoryStorage)(nil)
 
 // NewMemoryStorage возвращает указатель на In Memory хранилище со всеми зависимостями
 func NewMemoryStorage(config *serverconfig.Config, logger logger.Logger) *MemoryStorage {
