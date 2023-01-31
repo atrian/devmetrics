@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
@@ -136,6 +137,29 @@ func (h *Handler) unmarshallMetrics(r *http.Request) ([]dto.Metrics, error) {
 		body = r.Body
 	}
 
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			h.logger.Error("Body io.ReadCloser error", err)
+		}
+	}(r.Body)
+
+	// если в настройках установлен ключ шифрования, расшифровываем метрики
+	if h.crypter.ReadyForDecrypt() {
+		buf := new(bytes.Buffer)
+		_, err := buf.ReadFrom(body)
+		if err != nil {
+			h.logger.Error("Read from r.body failed", err)
+		}
+
+		message, err := h.decryptMessage(buf.Bytes())
+		if err != nil {
+			h.logger.Error("decryptMessage failed", err)
+		}
+
+		body = bytes.NewReader(message)
+	}
+
 	var metrics []dto.Metrics
 	decoder := json.NewDecoder(body)
 	err := decoder.Decode(&metrics)
@@ -153,4 +177,12 @@ func (h *Handler) decodeGzipBody(gzipR io.Reader) io.Reader {
 		h.logger.Error("decodeGzipBody cant set up gzip decoder", err)
 	}
 	return gz
+}
+
+func (h *Handler) decryptMessage(encryptedMessage []byte) ([]byte, error) {
+	message, err := h.crypter.Decrypt(encryptedMessage)
+	if err != nil {
+		return nil, err
+	}
+	return message, nil
 }

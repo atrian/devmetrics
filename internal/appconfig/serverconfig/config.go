@@ -15,9 +15,10 @@ var (
 	address       *string
 	file          *string
 	hashKey       *string
+	cryptoKey     *string
 	dsn           *string
-	restore       *bool
 	storeInterval *time.Duration
+	restore       *bool
 	profile       *bool
 )
 
@@ -33,6 +34,7 @@ type ServerConfig struct {
 	StoreFile          string        `env:"STORE_FILE"` // StoreFile файл для сохранения накопленных метрик на диске
 	MetricTemplateFile string        // MetricTemplateFile шаблон вывода метрик в HTML формате
 	HashKey            string        `env:"KEY"`            // HashKey ключ для проверки подписи метрик
+	CryptoKey          string        `env:"CRYPTO_KEY"`     // CryptoKey путь до файла с приватным ключом
 	DBDSN              string        `env:"DATABASE_DSN"`   // DBDSN строка соединения с базой данных (PGSQL)
 	StoreInterval      time.Duration `env:"STORE_INTERVAL"` // StoreInterval интервал сохранения накопленных метрик в файл на диске, по умолчанию раз в 5 минут
 	Restore            bool          `env:"RESTORE"`        // Restore флаг периодического сброса накопленных метрик в файл на диск
@@ -108,6 +110,7 @@ func (config *Config) loadServerFlags() {
 	restore = flag.Bool("r", true, "Restore metrics from dump file on server start.")
 	storeInterval = flag.Duration("i", 300*time.Second, "Metrics dump interval in seconds.")
 	hashKey = flag.String("k", "", "Key for metrics sign validation")
+	cryptoKey = flag.String("crypto-key", "", "Path to private PEM key")
 	dsn = flag.String("d", "", "DSN for PostgreSQL server")
 	profile = flag.Bool("p", false, "Enable pprof profiler")
 
@@ -118,6 +121,7 @@ func (config *Config) loadServerFlags() {
 	config.Server.Restore = *restore
 	config.Server.StoreInterval = *storeInterval
 	config.Server.HashKey = *hashKey
+	config.Server.CryptoKey = *cryptoKey
 	config.Server.DBDSN = *dsn
 	config.Server.ProfileApp = *profile
 }

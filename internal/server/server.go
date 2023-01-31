@@ -1,6 +1,7 @@
 // Package server - серверная часть приложения по сбору метрик.
 // Принимает метрики в JSON формате, сохраняет в In Memory или PostrgeSQL хранилище
 // Реализована проверка подписи метрик.
+// Реализовано асинхронное шифрование метрик
 // Подключено профилирование, см. конфигурацию serverconfig.ServerConfig
 package server
 
@@ -80,11 +81,14 @@ func NewServer() *Server {
 //	r.Handle("/pprof/block", pprof.Handler("block"))
 //	r.Handle("/pprof/allocs", pprof.Handler("allocs"))
 func (s *Server) Run() {
+	// слайс для кастомных middlewares
+	var customMiddlewares []func(next http.Handler) http.Handler
 
 	s.logger.Info(fmt.Sprintf("Starting server @ %v", s.config.HTTP.Address))
 	defer s.Stop()
 
-	routes := router.New(handlers.New(s.config, s.storage, s.logger))
+	api := handlers.New(s.config, s.storage, s.logger)
+	routes := router.New(api, customMiddlewares)
 	// Разрешаем роуты профайлера, если разрешено конфигурацией
 	if s.config.Server.ProfileApp {
 		routes.Mount("/debug", middleware.Profiler())

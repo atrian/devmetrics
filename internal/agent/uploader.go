@@ -137,7 +137,7 @@ func (uploader *Uploader) SendAllStats(metrics *MetricsDics) {
 	uploader.sendGzippedRequest(data)
 }
 
-// sendRequest отправка запроса, используется для массовой отправки метрик методом POST
+// sendRequest отправка запроса, используется для отправки одной метрики методом POST
 // без сжатия
 func (uploader *Uploader) sendRequest(body []byte) {
 	// строим адрес сервера

@@ -1,4 +1,3 @@
-// Package crypter Шифрование сообщений между агентом и сервером
 package crypter
 
 import "crypto/rsa"
@@ -16,6 +15,10 @@ type Crypter interface {
 	EncryptWithKey(message []byte, key *rsa.PublicKey) ([]byte, error)
 	// DecryptWithKey расшифровывает сообщение с предоставленным приватным ключом
 	DecryptWithKey(message []byte, key *rsa.PrivateKey) ([]byte, error)
+	// ReadyForEncrypt возвращает true когда загружен публичный ключ
+	ReadyForEncrypt() bool
+	// ReadyForDecrypt возвращает true когда загружен приватный ключ
+	ReadyForDecrypt() bool
 }
 
 // CryptoParser осуществляет чтение ключей по переданному пути

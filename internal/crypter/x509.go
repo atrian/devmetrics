@@ -1,3 +1,16 @@
+// Package crypter Шифрует и расшифровывает сообщения при помощи публичного и приватного RSA ключа
+// Большие сообщения разбиваются на части по 446 байт и шифруются отдельно
+//
+// Варианты оптимизации:
+//
+// 1. Использовать для шифрования метрик симметричный алгоритм
+// Ключ генерировать случайным образом и шифровать его ассиметрично с помощью rsa.EncryptOAEP
+// Передавать зашифрованный ключ вместе с данными [512 байт ключ][симметрично зашифрованное тело сообщения]
+//
+// 2. Добавить поддержку многопоточности в шифрование / расшифровку сообщений в методах
+// KeyManager.EncryptBigMessage и KeyManager.DecryptBigMessage
+//
+// На текущий момент принято решение преждевременную оптимизацию не производить.
 package crypter
 
 import (
@@ -61,6 +74,11 @@ func (k *KeyManager) RememberPrivateKey(key *rsa.PrivateKey) {
 	k.PrivateKey = key
 }
 
+// ReadyForDecrypt возвращает true если приватный ключ загружен в менеджер
+func (k *KeyManager) ReadyForDecrypt() bool {
+	return k.PrivateKey != nil
+}
+
 // ReadPublicKey читает публичный ключ с диска, возвращает указатель на структуру rsa.PublicKey
 // использует ParsePublicKey для парсинга ключа
 func (k *KeyManager) ReadPublicKey(keyPath string) (*rsa.PublicKey, error) {
@@ -87,6 +105,11 @@ func (k *KeyManager) ParsePublicKey(key []byte) (*rsa.PublicKey, error) {
 // RememberPublicKey кеширование публичного ключа
 func (k *KeyManager) RememberPublicKey(key *rsa.PublicKey) {
 	k.PublicKey = key
+}
+
+// ReadyForEncrypt возвращает true если публичный ключ загружен в менеджер
+func (k *KeyManager) ReadyForEncrypt() bool {
+	return k.PublicKey != nil
 }
 
 // GenerateKeys генерирует пару приватного и публичного ключа длиной 4096 бит
@@ -157,9 +180,6 @@ func (k *KeyManager) EncryptWithKey(message []byte, key *rsa.PublicKey) ([]byte,
 	// and sha256.New() is a reasonable choice.
 	hash := sha256.New()
 
-	size := hash.Size()
-	_ = size
-
 	encryptedMessage, err := rsa.EncryptOAEP(hash, rand.Reader, key, message, nil)
 	if err != nil {
 		return nil, err
@@ -186,7 +206,9 @@ func (k *KeyManager) DecryptBigMessage(message []byte, key *rsa.PrivateKey) ([]b
 			chunkEnd = i + EncryptedBlockSize
 		}
 
-		decPart, err := k.DecryptWithKey(message[i:chunkEnd], key)
+		chunk := message[i:chunkEnd]
+
+		decPart, err := k.DecryptWithKey(chunk, key)
 		if err != nil {
 			return nil, err
 		}

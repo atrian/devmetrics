@@ -90,10 +90,10 @@ func ExampleKeyManager_GenerateKeys() {
 
 	keyPath := filepath.Join(cwd, keysDir)
 
-	if _, err := os.Stat(keyPath); !os.IsNotExist(err) {
-		err := os.RemoveAll(keyPath)
-		if err != nil {
-			log.Fatal("Can't remove keys dir:", err.Error())
+	if _, statErr := os.Stat(keyPath); !os.IsNotExist(statErr) {
+		removeErr := os.RemoveAll(keyPath)
+		if removeErr != nil {
+			log.Fatal("Can't remove keys dir:", removeErr.Error())
 		}
 	}
 

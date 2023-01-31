@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
+	"github.com/atrian/devmetrics/internal/crypter"
 	"github.com/atrian/devmetrics/internal/server/storage"
 	"github.com/atrian/devmetrics/internal/signature"
 	"github.com/atrian/devmetrics/pkg/logger"
@@ -11,7 +12,8 @@ import (
 type Handler struct {
 	storage storage.Repository
 	config  *serverconfig.Config
-	hasher  signature.Hasher
+	hasher  signature.Hasher // hasher для проверки подписи метрик
+	crypter crypter.Crypter  // crypter для расшифровки метрик приватным ключом
 	logger  logger.Logger
 }
 
@@ -21,6 +23,17 @@ func New(config *serverconfig.Config, storage storage.Repository, logger logger.
 		config:  config,
 		hasher:  signature.NewSha256Hasher(),
 		logger:  logger,
+	}
+
+	// Конфигурируем модуль расшифровки метрик, если установлен ключ
+	if h.config.Server.CryptoKey != "" {
+		km := crypter.New()
+		secret, err := km.ReadPrivateKey(h.config.Server.CryptoKey)
+		if err != nil {
+			h.logger.Error("Can't read private key", err)
+		}
+		km.RememberPrivateKey(secret)
+		h.crypter = km
 	}
 
 	return h
