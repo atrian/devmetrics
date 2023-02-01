@@ -1,16 +1,14 @@
 // Package crypter Шифрует и расшифровывает сообщения при помощи публичного и приватного RSA ключа
 // Большие сообщения разбиваются на части по 446 байт и шифруются отдельно
 //
+// Добавлена поддержка многопоточности в шифрование / расшифровку сообщений в методах
+// KeyManager.EncryptBigMessage и KeyManager.DecryptBigMessage
+//
 // Варианты оптимизации:
 //
 // 1. Использовать для шифрования метрик симметричный алгоритм
 // Ключ генерировать случайным образом и шифровать его ассиметрично с помощью rsa.EncryptOAEP
 // Передавать зашифрованный ключ вместе с данными [512 байт ключ][симметрично зашифрованное тело сообщения]
-//
-// 2. Добавить поддержку многопоточности в шифрование / расшифровку сообщений в методах
-// KeyManager.EncryptBigMessage и KeyManager.DecryptBigMessage
-//
-// На текущий момент принято решение преждевременную оптимизацию не производить.
 package crypter
 
 import (
@@ -20,8 +18,10 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
+	"log"
 	"math"
 	"os"
+	"sync"
 )
 
 var _ Crypter = (*KeyManager)(nil)
@@ -40,6 +40,14 @@ const (
 type KeyManager struct {
 	PrivateKey *rsa.PrivateKey
 	PublicKey  *rsa.PublicKey
+}
+
+// chunk используется для шифрования данных в многопоточном режиме.
+// в зависимости от размера сообщения данные разбиваются на блоки длинной MessageLenLimit (446 байт) при шифровке
+// и EncryptedBlockSize (512 байт) при расшифровке
+type chunk struct {
+	Index uint   // индекс блока
+	Data  []byte // данные блока
 }
 
 func New() *KeyManager {
@@ -156,21 +164,94 @@ func (k *KeyManager) EncryptBigMessage(message []byte, key *rsa.PublicKey) ([]by
 	chunks := int(math.Ceil(float64(len(message)) / MessageLenLimit))
 
 	result := make([]byte, 0, chunks*EncryptedBlockSize)
-	for i := 0; i < chunks*MessageLenLimit; i += MessageLenLimit {
+
+	// wg ждем завершения всех горутин
+	wg := sync.WaitGroup{}
+	// errCh канал для отлова ошибки. Если произошла ошибка, останавливаем остальные горутины
+	errCh := make(chan error)
+	// stopCh канал для сигналов остановки
+	stopCh := make(chan struct{})
+	// chunkCh канал для записи результатов
+	chunkCh := make(chan chunk, chunks)
+
+	for i, chunkIndex := 0, 0; i < chunks*MessageLenLimit; i, chunkIndex = i+MessageLenLimit, chunkIndex+1 {
 		chunkEnd := len(message)
 		if i+MessageLenLimit < chunkEnd {
 			chunkEnd = i + MessageLenLimit
 		}
 
-		encPart, err := k.EncryptWithKey(message[i:chunkEnd], key)
-		if err != nil {
-			return nil, err
-		}
-
-		result = append(result, encPart...)
+		// добавляем горутину для шифрования чанка
+		wg.Add(1)
+		go k.runEncryptProcess(&wg, errCh, stopCh, chunkCh, chunkIndex, message[i:chunkEnd], key)
 	}
 
+	// в отдельной горутине ждём завершения всех шифровальщиков
+	// после этого закрываем канал errCh — больше записей не будет
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
+	// Если есть ошибки шифрования закрываем канал stopCh (завершаем остальные горутины)
+	if err := <-errCh; err != nil {
+		log.Println(err)
+		close(stopCh)
+		return nil, err
+	}
+
+	// считываем данные из канала с чанками в слайс восстанавливая порядок частей сообщения
+	resultBuffer := make([][]byte, chunks)
+	for i := 0; i < chunks; i++ {
+		part := <-chunkCh
+		resultBuffer[part.Index] = part.Data
+	}
+
+	// закарываем канал
+	close(chunkCh)
+
+	// собираем из частей шифрованное сообщение
+	result = bytes.Join(resultBuffer, nil)
+
 	return result, nil
+}
+
+// runEncryptProcess для шифрования частей сообщения в многопоточном режиме
+// errCh - пишет в канал ошибку в случае возникновения
+// stopCh - остановка других шифровальщиков в случае ошибки
+// chunkCh - канал для сброса обработанных данных
+// index - индекс части данных в шифруемом сообщении
+// messagePart - часть открытого сообщения длинной не более MessageLenLimit
+// key - ключ для шифрования rsa.PublicKey
+func (k *KeyManager) runEncryptProcess(
+	wg *sync.WaitGroup,
+	errCh chan<- error,
+	stopCh <-chan struct{},
+	chunkCh chan<- chunk,
+	index int,
+	messagePart []byte,
+	key *rsa.PublicKey) {
+
+	// Обработка ошибок после завершения шифрования чанка
+	var defErr error
+	defer func() {
+		if defErr != nil {
+			select {
+			// первая горутина, поймавшая ошибку, сможет записать в канал
+			case errCh <- defErr:
+			// остальные завершат работу, провалившись в этот case
+			case <-stopCh:
+				log.Println("aborting chunk encryption")
+			}
+		}
+		wg.Done()
+	}()
+
+	// шифруем кусок сообщения
+	encPart, defErr := k.EncryptWithKey(messagePart, key)
+	chunkCh <- chunk{
+		Index: uint(index),
+		Data:  encPart,
+	}
 }
 
 // EncryptWithKey шифрует сообщение с предоставленным публичным ключом
@@ -200,23 +281,93 @@ func (k *KeyManager) DecryptBigMessage(message []byte, key *rsa.PrivateKey) ([]b
 
 	result := make([]byte, 0, len(message))
 
-	for i := 0; i < chunks*EncryptedBlockSize; i += EncryptedBlockSize {
+	// wg ждем завершения всех горутин
+	wg := sync.WaitGroup{}
+	// errCh канал для отлова ошибки. Если произошла ошибка, останавливаем остальные горутины
+	errCh := make(chan error)
+	// stopCh канал для сигналов остановки
+	stopCh := make(chan struct{})
+	// chunkCh канал для записи результатов
+	chunkCh := make(chan chunk, chunks)
+
+	for i, chunkIndex := 0, 0; i < chunks*EncryptedBlockSize; i, chunkIndex = i+EncryptedBlockSize, chunkIndex+1 {
 		chunkEnd := len(message)
 		if i+EncryptedBlockSize < chunkEnd {
 			chunkEnd = i + EncryptedBlockSize
 		}
 
-		chunk := message[i:chunkEnd]
-
-		decPart, err := k.DecryptWithKey(chunk, key)
-		if err != nil {
-			return nil, err
-		}
-
-		result = append(result, decPart...)
+		// добавляем горутину для шифрования чанка
+		wg.Add(1)
+		go k.runDecryptProcess(&wg, errCh, stopCh, chunkCh, chunkIndex, message[i:chunkEnd], key)
 	}
 
+	// в отдельной горутине ждём завершения всех шифровальщиков
+	// после этого закрываем канал errCh — больше записей не будет
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
+	// Если есть ошибки шифрования закрываем канал stopCh (завершаем остальные горутины)
+	if err := <-errCh; err != nil {
+		log.Println(err)
+		close(stopCh)
+		return nil, err
+	}
+
+	// считываем данные из канала с чанками в слайс восстанавливая порядок частей сообщения
+	resultBuffer := make([][]byte, chunks)
+	for i := 0; i < chunks; i++ {
+		part := <-chunkCh
+		resultBuffer[part.Index] = part.Data
+	}
+
+	// закарываем канал
+	close(chunkCh)
+
+	// собираем из частей шифрованное сообщение
+	result = bytes.Join(resultBuffer, nil)
+
 	return result, nil
+}
+
+// runDecryptProcess для расшифровки частей сообщения в многопоточном режиме
+// errCh - пишет в канал ошибку в случае возникновения
+// stopCh - остановка других шифровальщиков в случае ошибки
+// chunkCh - канал для сброса обработанных данных
+// index - индекс части данных в шифруемом сообщении
+// messagePart - часть шифрованного сообщения длинной не более EncryptedBlockSize
+// key - ключ для расшифровки rsa.PrivateKey
+func (k *KeyManager) runDecryptProcess(
+	wg *sync.WaitGroup,
+	errCh chan<- error,
+	stopCh <-chan struct{},
+	chunkCh chan<- chunk,
+	index int,
+	messagePart []byte,
+	key *rsa.PrivateKey) {
+
+	// Обработка ошибок после завершения шифрования чанка
+	var defErr error
+	defer func() {
+		if defErr != nil {
+			select {
+			// первая горутина, поймавшая ошибку, сможет записать в канал
+			case errCh <- defErr:
+			// остальные завершат работу, провалившись в этот case
+			case <-stopCh:
+				log.Println("aborting chunk decryption")
+			}
+		}
+		wg.Done()
+	}()
+
+	// шифруем кусок сообщения
+	encPart, defErr := k.DecryptWithKey(messagePart, key)
+	chunkCh <- chunk{
+		Index: uint(index),
+		Data:  encPart,
+	}
 }
 
 // DecryptWithKey расшифровывает сообщение с предоставленным приватным ключом
