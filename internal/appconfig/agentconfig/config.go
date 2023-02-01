@@ -80,6 +80,7 @@ func (config *Config) loadAgentConfig() {
 func (config *Config) loadHTTPConfig() {
 	config.HTTP = HTTPConfig{
 		Protocol:    "http",
+		Address:     "127.0.0.1:8080",
 		URLTemplate: "%v://%v/",
 		ContentType: "application/json",
 	}
@@ -89,6 +90,7 @@ func (config *Config) loadHTTPConfig() {
 func (config *Config) parseFlags() {
 	jsonConf = flag.String("config", "", "Path to JSON configuration file")
 	flag.StringVar(jsonConf, "c", *jsonConf, "alias for -config")
+
 	address = flag.String("a", "127.0.0.1:8080", "Address and port used for agent.")
 	reportInterval = flag.Duration("r", 10*time.Second, "Metrics upload interval in seconds.")
 	pollInterval = flag.Duration("p", 2*time.Second, "Metrics pool interval.")
@@ -100,11 +102,25 @@ func (config *Config) parseFlags() {
 
 // loadAgentFlags загрузка конфигурации из флагов
 func (config *Config) loadAgentFlags() {
-	config.HTTP.Address = *address
-	config.Agent.ReportInterval = *reportInterval
-	config.Agent.PollInterval = *pollInterval
-	config.Agent.HashKey = *hashKey
-	config.Agent.CryptoKey = *cryptoKey
+	if isFlagPassed("a") {
+		config.HTTP.Address = *address
+	}
+
+	if isFlagPassed("r") {
+		config.Agent.ReportInterval = *reportInterval
+	}
+
+	if isFlagPassed("p") {
+		config.Agent.PollInterval = *pollInterval
+	}
+
+	if isFlagPassed("k") {
+		config.Agent.HashKey = *hashKey
+	}
+
+	if isFlagPassed("crypto-key") {
+		config.Agent.CryptoKey = *cryptoKey
+	}
 }
 
 // loadJSONConfiguration извлекает путь к JSON конфигу из флагов -c -config или переменной окружения CONFIG
@@ -173,4 +189,15 @@ func (config *Config) loadAgentEnvConfiguration() {
 	if err != nil {
 		config.logger.Fatal("loadAgentEnvConfiguration env.Parse config.Agent", err)
 	}
+}
+
+// isFlagPassed проверка указан ли флан при запуске программы
+func isFlagPassed(name string) bool {
+	var found bool
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+	return found
 }
