@@ -3,6 +3,7 @@ package handlers_test
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -116,12 +117,10 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (int, s
 	respBody, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
-	defer func(Body io.ReadCloser) {
-		bcErr := Body.Close()
-		if bcErr != nil {
-			return
-		}
-	}(resp.Body)
+	bcErr := resp.Body.Close()
+	if bcErr != nil {
+		log.Fatal("Can't close resp body")
+	}
 	return resp.StatusCode, string(respBody)
 }
 
@@ -147,14 +146,13 @@ func ExampleHandler_UpdateMetric() {
 	if respErr != nil {
 		appLogger.Fatal("http.DefaultClient.Do error", respErr)
 	}
-	defer func(Body io.ReadCloser) {
-		cErr := Body.Close()
-		if cErr != nil {
-			return
-		}
-	}(response.Body)
 
 	responseBody, _ := io.ReadAll(response.Body)
+
+	cErr := response.Body.Close()
+	if cErr != nil {
+		log.Fatal("Can't close resp body")
+	}
 
 	// В случае успеха сервис отвечает кодом 200 и текущим значением метрики
 	fmt.Println(response.StatusCode, string(responseBody))
@@ -186,15 +184,12 @@ func ExampleHandler_UpdateJSONMetrics() {
 	if respErr != nil {
 		appLogger.Fatal("http.DefaultClient.Do error", respErr)
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			return
-		}
-	}(response.Body)
 
 	responseBody, _ := io.ReadAll(response.Body)
-
+	err := response.Body.Close()
+	if err != nil {
+		log.Fatal("Can't close resp body")
+	}
 	// В случае успеха сервис отвечает кодом 200 и JSON содержащим статус и текущие значения переданных метрик
 	fmt.Println(response.StatusCode, string(responseBody))
 
@@ -251,14 +246,12 @@ func ExampleHandler_GetJSONMetric() {
 	if respErr != nil {
 		appLogger.Fatal("http.DefaultClient.Do error", respErr)
 	}
-	defer func(Body io.ReadCloser) {
-		cErr := Body.Close()
-		if cErr != nil {
-			return
-		}
-	}(response.Body)
 
 	responseBody, _ := io.ReadAll(response.Body)
+	cErr := response.Body.Close()
+	if cErr != nil {
+		log.Fatal("Can't close resp body")
+	}
 
 	// В случае успеха сервис отвечает кодом 200 и текущим значением метрики в формате JSON
 	fmt.Println(response.StatusCode, string(responseBody))
@@ -315,14 +308,13 @@ func ExampleHandler_GetMetric() {
 	if respErr != nil {
 		appLogger.Fatal("http.DefaultClient.Do error", respErr)
 	}
-	defer func(Body io.ReadCloser) {
-		cErr := Body.Close()
-		if cErr != nil {
-			return
-		}
-	}(response.Body)
 
 	responseBody, _ := io.ReadAll(response.Body)
+
+	cErr := response.Body.Close()
+	if cErr != nil {
+		log.Fatal("Can't close resp body")
+	}
 
 	// В случае успеха сервис отвечает кодом 200 и текущим значением метрики
 	fmt.Println(response.StatusCode, string(responseBody))
@@ -357,14 +349,13 @@ func ExampleHandler_UpdateJSONMetric() {
 	if respErr != nil {
 		appLogger.Fatal("http.DefaultClient.Do error", respErr)
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			return
-		}
-	}(response.Body)
 
 	responseBody, _ := io.ReadAll(response.Body)
+
+	cErr := response.Body.Close()
+	if cErr != nil {
+		log.Fatal("Can't close resp body")
+	}
 
 	// В случае успеха сервис отвечает кодом 200 и JSON содержащим статус и текущие значения переданной метрики
 	fmt.Println(response.StatusCode, string(responseBody))

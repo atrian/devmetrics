@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
@@ -154,15 +153,12 @@ func (uploader *Uploader) sendRequest(body []byte) {
 	resp, err := uploader.client.Do(request)
 	if err != nil {
 		uploader.logger.Error("sendRequest client.Do", err)
+		return
 	}
 
-	if resp != nil {
-		defer func(Body io.ReadCloser) {
-			bcErr := Body.Close()
-			if bcErr != nil {
-				uploader.logger.Error("sendRequest Body.Close error", bcErr)
-			}
-		}(resp.Body)
+	bcErr := resp.Body.Close()
+	if bcErr != nil {
+		uploader.logger.Error("sendRequest Body.Close error", bcErr)
 	}
 }
 
@@ -201,15 +197,12 @@ func (uploader *Uploader) sendGzippedRequest(body []byte) {
 	resp, err := uploader.client.Do(request)
 	if err != nil {
 		uploader.logger.Error("sendGzippedRequest client.Do", err)
+		return
 	}
 
-	if err == nil {
-		defer func(Body io.ReadCloser) {
-			bcErr := Body.Close()
-			if bcErr != nil {
-				uploader.logger.Error("sendGzippedRequest Body.Close error", err)
-			}
-		}(resp.Body)
+	bcErr := resp.Body.Close()
+	if bcErr != nil {
+		uploader.logger.Error("sendGzippedRequest Body.Close error", err)
 	}
 }
 
