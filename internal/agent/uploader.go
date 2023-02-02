@@ -203,12 +203,14 @@ func (uploader *Uploader) sendGzippedRequest(body []byte) {
 		uploader.logger.Error("sendGzippedRequest client.Do", err)
 	}
 
-	defer func(Body io.ReadCloser) {
-		bcErr := Body.Close()
-		if bcErr != nil {
-			uploader.logger.Error("sendGzippedRequest Body.Close error", err)
-		}
-	}(resp.Body)
+	if err == nil {
+		defer func(Body io.ReadCloser) {
+			bcErr := Body.Close()
+			if bcErr != nil {
+				uploader.logger.Error("sendGzippedRequest Body.Close error", err)
+			}
+		}(resp.Body)
+	}
 }
 
 // buildStatUploadURL построение целевого адреса для отправки одной метрики
