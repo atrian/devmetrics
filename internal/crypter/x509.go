@@ -46,8 +46,8 @@ type KeyManager struct {
 // в зависимости от размера сообщения данные разбиваются на блоки длинной MessageLenLimit (446 байт) при шифровке
 // и EncryptedBlockSize (512 байт) при расшифровке
 type chunk struct {
-	Index uint   // индекс блока
 	Data  []byte // данные блока
+	Index uint   // индекс блока
 }
 
 func New() *KeyManager {
@@ -163,8 +163,6 @@ func (k *KeyManager) Encrypt(message []byte) ([]byte, error) {
 func (k *KeyManager) EncryptBigMessage(message []byte, key *rsa.PublicKey) ([]byte, error) {
 	chunks := int(math.Ceil(float64(len(message)) / MessageLenLimit))
 
-	result := make([]byte, 0, chunks*EncryptedBlockSize)
-
 	// wg ждем завершения всех горутин
 	wg := sync.WaitGroup{}
 	// errCh канал для отлова ошибки. Если произошла ошибка, останавливаем остальные горутины
@@ -210,7 +208,7 @@ func (k *KeyManager) EncryptBigMessage(message []byte, key *rsa.PublicKey) ([]by
 	close(chunkCh)
 
 	// собираем из частей шифрованное сообщение
-	result = bytes.Join(resultBuffer, nil)
+	result := bytes.Join(resultBuffer, nil)
 
 	return result, nil
 }
@@ -279,8 +277,6 @@ func (k *KeyManager) Decrypt(message []byte) ([]byte, error) {
 func (k *KeyManager) DecryptBigMessage(message []byte, key *rsa.PrivateKey) ([]byte, error) {
 	chunks := int(math.Ceil(float64(len(message)) / EncryptedBlockSize))
 
-	result := make([]byte, 0, len(message))
-
 	// wg ждем завершения всех горутин
 	wg := sync.WaitGroup{}
 	// errCh канал для отлова ошибки. Если произошла ошибка, останавливаем остальные горутины
@@ -326,7 +322,7 @@ func (k *KeyManager) DecryptBigMessage(message []byte, key *rsa.PrivateKey) ([]b
 	close(chunkCh)
 
 	// собираем из частей шифрованное сообщение
-	result = bytes.Join(resultBuffer, nil)
+	result := bytes.Join(resultBuffer, nil)
 
 	return result, nil
 }

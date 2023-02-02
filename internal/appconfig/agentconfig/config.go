@@ -167,10 +167,10 @@ func (config *Config) loadJSONConfiguration() {
 	config.HTTP.Address = dummy.Address
 	config.Agent.CryptoKey = dummy.CryptoKey
 
-	parsedReportInterval, err := time.ParseDuration(dummy.ReportInterval)
+	parsedReportInterval, _ := time.ParseDuration(dummy.ReportInterval)
 	config.Agent.ReportInterval = parsedReportInterval
 
-	parsedPoolInterval, err := time.ParseDuration(dummy.PollInterval)
+	parsedPoolInterval, _ := time.ParseDuration(dummy.PollInterval)
 	config.Agent.PollInterval = parsedPoolInterval
 
 	config.logger.Info("JSON configuration loaded")

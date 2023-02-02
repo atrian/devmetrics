@@ -25,16 +25,16 @@ func New(config *serverconfig.Config, storage storage.Repository, logger logger.
 		logger:  logger,
 	}
 
-	// Конфигурируем модуль расшифровки метрик, если установлен ключ
+	// Конфигурируем модуль расшифровки метрик, установлен ключ если он есть
+	km := crypter.New()
 	if h.config.Server.CryptoKey != "" {
-		km := crypter.New()
 		secret, err := km.ReadPrivateKey(h.config.Server.CryptoKey)
 		if err != nil {
 			h.logger.Error("Can't read private key", err)
 		}
 		km.RememberPrivateKey(secret)
-		h.crypter = km
 	}
+	h.crypter = km
 
 	return h
 }

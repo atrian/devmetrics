@@ -35,11 +35,11 @@ type Config struct {
 // ConfDummy шаблон для парсинга JSON конфигурации
 type ConfDummy struct {
 	Address       string `json:"address,omitempty"`
-	Restore       bool   `json:"restore,omitempty"`
 	StoreInterval string `json:"store_interval,omitempty"`
 	StoreFile     string `json:"store_file,omitempty"`
 	DatabaseDsn   string `json:"database_dsn,omitempty"`
 	CryptoKey     string `json:"crypto_key,omitempty"`
+	Restore       bool   `json:"restore,omitempty"`
 }
 
 // ServerConfig основная конфигурация сервера для хранения метрик
@@ -152,7 +152,7 @@ func (config *Config) loadJSONConfiguration() {
 	config.Server.DBDSN = dummy.DatabaseDsn
 	config.Server.CryptoKey = dummy.CryptoKey
 
-	parsedStoreInterval, err := time.ParseDuration(dummy.StoreInterval)
+	parsedStoreInterval, _ := time.ParseDuration(dummy.StoreInterval)
 	config.Server.StoreInterval = parsedStoreInterval
 
 	config.logger.Info("JSON configuration loaded")
