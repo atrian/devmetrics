@@ -5,31 +5,42 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
-	"github.com/atrian/devmetrics/internal/crypto"
+	"github.com/atrian/devmetrics/internal/crypter"
 	"github.com/atrian/devmetrics/internal/dto"
+	"github.com/atrian/devmetrics/internal/signature"
 	"github.com/atrian/devmetrics/pkg/logger"
 )
 
 // Uploader отправляет данные метрик и счетчиков на удаленный сервер
 type Uploader struct {
-	client *http.Client
-	config *agentconfig.Config // config конфигурация приложения
-	hasher crypto.Hasher       // hasher подпись метрик
-	logger logger.Logger
+	client  *http.Client
+	config  *agentconfig.Config // config конфигурация приложения
+	hasher  signature.Hasher    // hasher подпись метрик
+	crypter crypter.Crypter     // crypter отправка шифрованных данных
+	logger  logger.Logger
 }
 
 // NewUploader принимает конфигурацию и логгер, подключает зависимости:
 // crypto.Sha256Hasher, http.Client
 func NewUploader(config *agentconfig.Config, logger logger.Logger) *Uploader {
+	keyManager := crypter.New()
+	if config.Agent.CryptoKey != "" {
+		pubKey, err := keyManager.ReadPublicKey(config.Agent.CryptoKey)
+		if err != nil {
+			logger.Fatal("Can't load public key", err)
+		}
+		keyManager.RememberPublicKey(pubKey)
+	}
+
 	uploader := Uploader{
-		client: &http.Client{},
-		config: config,
-		hasher: crypto.NewSha256Hasher(),
-		logger: logger,
+		client:  &http.Client{},
+		config:  config,
+		hasher:  signature.NewSha256Hasher(),
+		crypter: keyManager,
+		logger:  logger,
 	}
 	return &uploader
 }
@@ -74,8 +85,8 @@ func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 	}
 }
 
-// SendAllStats всех метрик на сервер с подписью в JSON формате
-func (uploader *Uploader) SendAllStats(metrics *MetricsDics) {
+// MarshallMetrics маршалит текущие значения метрик данные в JSON
+func (uploader *Uploader) marshallMetrics(metrics *MetricsDics) ([]byte, error) {
 	// создаем функцию-декоратор для того чтобы не тащить хешер и конфиг в другой слой приложения напрямую
 	configuredHasher := func(metricType, id string, delta *int64, value *float64) string {
 		switch metricType {
@@ -94,16 +105,39 @@ func (uploader *Uploader) SendAllStats(metrics *MetricsDics) {
 
 	jsonMetrics, err := json.Marshal(exportedMetrics)
 
-	if err != nil {
-		uploader.logger.Error("SendAllStats json.Marshal", err)
-		return
-	}
-
-	uploader.sendGzippedRequest(jsonMetrics)
+	return jsonMetrics, err
 }
 
-// sendRequest отправка запроса, используется для массовой отправки метрик методом POST
-// Используется gzip сжатие, передается заголовок Content-Encoding: gzip
+func (uploader *Uploader) encryptData(data []byte) ([]byte, error) {
+	if uploader.config.Agent.CryptoKey != "" {
+		secureData, err := uploader.crypter.Encrypt(data)
+		if err != nil {
+			uploader.logger.Error("Can't encrypt message", err)
+		}
+		return secureData, err
+	}
+	return data, nil
+}
+
+// SendAllStats отправка всех метрик на сервер
+func (uploader *Uploader) SendAllStats(metrics *MetricsDics) {
+	// маршалим данные в JSON
+	data, err := uploader.marshallMetrics(metrics)
+	if err != nil {
+		uploader.logger.Error("SendAllStats marshallMetrics error", err)
+	}
+
+	// шифруем данные при необходимости
+	data, err = uploader.encryptData(data)
+	if err != nil {
+		uploader.logger.Error("SendAllStats encryptData error", err)
+	}
+
+	uploader.sendGzippedRequest(data)
+}
+
+// sendRequest отправка запроса, используется для отправки одной метрики методом POST
+// без сжатия
 func (uploader *Uploader) sendRequest(body []byte) {
 	// строим адрес сервера
 	endpoint := uploader.buildStatUploadURL()
@@ -119,20 +153,17 @@ func (uploader *Uploader) sendRequest(body []byte) {
 	resp, err := uploader.client.Do(request)
 	if err != nil {
 		uploader.logger.Error("sendRequest client.Do", err)
+		return
 	}
 
-	if resp != nil {
-		defer func(Body io.ReadCloser) {
-			bcErr := Body.Close()
-			if bcErr != nil {
-				uploader.logger.Error("sendRequest Body.Close error", bcErr)
-			}
-		}(resp.Body)
+	bcErr := resp.Body.Close()
+	if bcErr != nil {
+		uploader.logger.Error("sendRequest Body.Close error", bcErr)
 	}
 }
 
 // sendGzippedRequest отправка запроса, используется для отправки метрик методом POST
-// без сжатия
+// Используется gzip сжатие, передается заголовок Content-Encoding: gzip
 func (uploader *Uploader) sendGzippedRequest(body []byte) {
 	if len(body) == 0 {
 		uploader.logger.Debug("Empty body, return")
@@ -166,15 +197,12 @@ func (uploader *Uploader) sendGzippedRequest(body []byte) {
 	resp, err := uploader.client.Do(request)
 	if err != nil {
 		uploader.logger.Error("sendGzippedRequest client.Do", err)
+		return
 	}
 
-	if resp != nil {
-		defer func(Body io.ReadCloser) {
-			bcErr := Body.Close()
-			if bcErr != nil {
-				uploader.logger.Error("sendGzippedRequest Body.Close error", err)
-			}
-		}(resp.Body)
+	bcErr := resp.Body.Close()
+	if bcErr != nil {
+		uploader.logger.Error("sendGzippedRequest Body.Close error", err)
 	}
 }
 

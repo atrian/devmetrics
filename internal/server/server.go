@@ -1,12 +1,14 @@
 // Package server - серверная часть приложения по сбору метрик.
 // Принимает метрики в JSON формате, сохраняет в In Memory или PostrgeSQL хранилище
 // Реализована проверка подписи метрик.
+// Реализовано асинхронное шифрование метрик
 // Подключено профилирование, см. конфигурацию serverconfig.ServerConfig
 package server
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -22,8 +24,9 @@ import (
 // Доступен профайлер при ProfileApp == true в serverconfig.ServerConfig
 type Server struct {
 	config  *serverconfig.Config
-	storage storage.IRepository
+	storage storage.Repository
 	logger  logger.Logger
+	web     http.Server
 }
 
 // NewServer возвращает указатель на Server сконфигурированный со всеми зависимостями:
@@ -39,7 +42,7 @@ func NewServer() *Server {
 	config := serverconfig.NewServerConfig(serverLogger)
 
 	// подключаем storage
-	var appStorage storage.IRepository
+	var appStorage storage.Repository
 
 	if config.Server.DBDSN == "" {
 		serverLogger.Info("Loading memory storage")
@@ -79,12 +82,17 @@ func NewServer() *Server {
 //	r.Handle("/pprof/heap", pprof.Handler("heap"))
 //	r.Handle("/pprof/block", pprof.Handler("block"))
 //	r.Handle("/pprof/allocs", pprof.Handler("allocs"))
-func (s *Server) Run() {
+func (s *Server) Run(ctx context.Context) {
+	graceShutdown := make(chan struct{})
+	go s.graceWatcher(ctx, graceShutdown)
+
+	// слайс для кастомных middlewares
+	var customMiddlewares []func(next http.Handler) http.Handler
 
 	s.logger.Info(fmt.Sprintf("Starting server @ %v", s.config.HTTP.Address))
-	defer s.Stop()
 
-	routes := router.New(handlers.New(s.config, s.storage, s.logger))
+	api := handlers.New(s.config, s.storage, s.logger)
+	routes := router.New(api, customMiddlewares)
 	// Разрешаем роуты профайлера, если разрешено конфигурацией
 	if s.config.Server.ProfileApp {
 		routes.Mount("/debug", middleware.Profiler())
@@ -94,11 +102,34 @@ func (s *Server) Run() {
 	s.storage.RunOnStart()
 
 	// запуск сервера, по умолчанию с адресом localhost, порт 8080
-	log.Fatal(http.ListenAndServe(s.config.HTTP.Address, routes))
+	s.web.Addr = s.config.HTTP.Address
+	s.web.Handler = routes
+	err := s.web.ListenAndServe()
+	if !errors.Is(err, http.ErrServerClosed) {
+		s.logger.Fatal("Server ListenAndServe err", err)
+	}
+	<-graceShutdown
+}
+
+func (s *Server) graceWatcher(ctx context.Context, grace chan struct{}) {
+	<-ctx.Done()
+	go func() {
+		s.Stop(grace)
+	}()
 }
 
 // Stop остановка сервера, завершение работы с хранилищем
-func (s *Server) Stop() {
+func (s *Server) Stop(grace chan struct{}) {
+	defer close(grace)
+
+	// выполняем остановку сервера
+	err := s.web.Shutdown(context.Background())
+	if err != nil {
+		s.logger.Error("Server stop error", err)
+	}
+	s.logger.Info("Server shutdown gracefully")
+
 	// выполняем процедуры остановки хранилища
 	s.storage.RunOnClose()
+	s.logger.Info("Storage shutdown gracefully")
 }

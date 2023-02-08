@@ -1,5 +1,5 @@
-// Package crypto модуль для подписи и проверки подлинности подписи в передаваемых метриках
-package crypto
+// Package signature модуль для подписи и проверки подлинности подписи в передаваемых метриках
+package signature
 
 import (
 	"crypto/hmac"

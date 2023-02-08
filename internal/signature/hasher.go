@@ -1,4 +1,4 @@
-package crypto
+package signature
 
 // Hasher интерфейс для подписи метрик и проверки подлинности подписи
 type Hasher interface {

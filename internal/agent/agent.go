@@ -6,6 +6,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -31,10 +32,13 @@ type Agent struct {
 	metrics *MetricsDics
 	// logger интерфейс логгера, в приложении используется ZAP логгер
 	logger logger.Logger
+	// profiler сервер профилировщика
+	profiler http.Server
 }
 
 // Run запуск основных функций: сбор статистики и отправка на сервер с определенным интервалом
-func (a *Agent) Run() {
+func (a *Agent) Run(ctx context.Context) {
+	graceShutdown := make(chan struct{})
 
 	a.logger.Info(
 		fmt.Sprintf("Agent started. PollInterval: %v, ReportInterval: %v, Server address: %v",
@@ -59,11 +63,23 @@ func (a *Agent) Run() {
 			case uploadTime := <-uploadStatsTicker.C:
 				a.logger.Debug(fmt.Sprintf("Metrics upload. Time: %v", uploadTime))
 				go a.UploadStats()
+			case <-ctx.Done():
+				// при завершении контекста выполняем последнюю отправку метрик
+				// закрываем сервер профилировщика, дожидаемся завершения операции и выходим из приложения
+
+				go func() {
+					a.Stop(graceShutdown)
+				}()
+
+				a.logger.Info("Agent shutdown gracefully")
+
+				return
 			}
 		}
 	}()
 
 	a.RunProfiler()
+	<-graceShutdown
 }
 
 // NewAgent подготовка зависимостей пакета: логгер, конфигурация, временное хранилище метрик
@@ -83,15 +99,16 @@ func NewAgent() *Agent {
 // RunProfiler запуск профайлера приложения на свободном порту, данные для подключения выводятся в лог
 func (a *Agent) RunProfiler() {
 	listener, err := net.Listen("tcp", ":0")
+
 	if err != nil {
 		a.logger.Error("Can't create listener for PPROF server", err)
 	}
 
 	a.logger.Info(fmt.Sprintf("Profiler started @ %v", listener.Addr()))
 
-	profilerErr := http.Serve(listener, nil)
-	if profilerErr != nil {
-		a.logger.Error("Can't start profiler server", profilerErr)
+	if profilerErr := a.profiler.Serve(listener); profilerErr != http.ErrServerClosed {
+		// ошибки старта или остановки Listener
+		a.logger.Fatal("HTTP server ListenAndServe: %v", profilerErr)
 	}
 }
 
@@ -116,4 +133,21 @@ func (a *Agent) UploadStats() {
 	uploader := NewUploader(a.config, a.logger)
 	uploader.SendAllStats(a.metrics)
 	a.logger.Info("Upload stats")
+}
+
+// Stop операции при завершении приложения
+func (a *Agent) Stop(grace chan struct{}) {
+	defer close(grace)
+
+	// Отправляем все текущие метрики
+	a.UploadStats()
+	a.logger.Info("Last metrics sent")
+
+	// Завершаем сервер профилирования
+	if err := a.profiler.Shutdown(context.Background()); err != nil {
+		// ошибки закрытия Listener
+		a.logger.Error("HTTP server Shutdown err", err)
+	}
+
+	a.logger.Info("Profiler closed")
 }

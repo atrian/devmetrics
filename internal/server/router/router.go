@@ -2,6 +2,8 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -13,52 +15,67 @@ type Router struct {
 	*chi.Mux
 }
 
-// registerMiddlewares общие middlewares для всех маршрутов
-func registerMiddlewares(router *Router) {
-	router.Use(middleware.RequestID)
-	router.Use(middleware.Logger)
-	router.Use(middlewares.GzipHandle)
+// RegisterMiddlewares общие middlewares для всех маршрутов
+// Вызывать ДО регистрации маршрутов
+func (r *Router) RegisterMiddlewares() *Router {
+	r.Use(middleware.RequestID)
+	r.Use(middleware.Logger)
+	r.Use(middlewares.GzipHandle)
+
+	return r
 }
 
-// registerRoutes регистрация всех маршрутов бизнес логики приложения
-func registerRoutes(router *Router, handler *handlers.Handler) {
+// RegisterCustomMiddlewares регистрация дополнительных middlewares.
+// Вызывать ДО регистрации маршрутов
+func (r *Router) RegisterCustomMiddlewares(middlewares []func(next http.Handler) http.Handler) *Router {
+	r.Use(middlewares...)
+	return r
+}
+
+// RegisterRoutes регистрация всех маршрутов бизнес логики приложения
+// Вызывать ПОСЛЕ регистрации всех middlewares
+func (r *Router) RegisterRoutes(handler *handlers.Handler) *Router {
 	// По запросу GET http://<АДРЕС_СЕРВЕРА>/ сервер должен отдавать HTML-страничку со списком имён
 	// и значений всех известных ему на текущий момент метрик.
-	router.Get("/", handler.GetMetrics())
+	r.Get("/", handler.GetMetrics())
 
 	// Сервер должен возвращать текущее значение запрашиваемой метрики в текстовом виде по запросу
 	// GET http://<АДРЕС_СЕРВЕРА>/value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ> (со статусом http.StatusOK).
 	// При попытке запроса неизвестной серверу метрики сервер должен возвращать http.StatusNotFound.
-	router.Get("/value/{metricType}/{metricTitle}", handler.GetMetric())
+	r.Get("/value/{metricType}/{metricTitle}", handler.GetMetric())
 
 	// Пинг соединения с БД
-	router.Get("/ping", handler.GetPing())
+	r.Get("/ping", handler.GetPing())
 
 	// Сохранение произвольных метрик,
 	// POST /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
-	router.Post("/update/{metricType}/{metricTitle}/{metricValue}", handler.UpdateMetric())
+	r.Post("/update/{metricType}/{metricTitle}/{metricValue}", handler.UpdateMetric())
 
 	// Получение 1 метрики в JSON
-	router.Post("/value/", handler.GetJSONMetric())
+	r.Post("/value/", handler.GetJSONMetric())
 
 	// Обновление 1 метрики в JSON
-	router.Post("/update/", handler.UpdateJSONMetric())
+	r.Post("/update/", handler.UpdateJSONMetric())
 
 	// Обновление пакета метрик из JSON
-	router.Post("/updates/", handler.UpdateJSONMetrics())
+	r.Post("/updates/", handler.UpdateJSONMetrics())
+
+	return r
 }
 
-// New возвращает подготовленный роутер со всеми зарегистрированными маршрутами и посредниками
-func New(handler *handlers.Handler) *Router {
+// New возвращает роутер со стандартной конфигурацией.
+// Принимает слайс дополнительных кастомных middleware
+func New(handler *handlers.Handler, middlewares []func(next http.Handler) http.Handler) *Router {
 	router := Router{
 		Mux: chi.NewMux(),
 	}
 
 	// middlewares
-	registerMiddlewares(&router)
+	router.RegisterMiddlewares()
+	router.RegisterCustomMiddlewares(middlewares)
 
 	// routes
-	registerRoutes(&router, handler)
+	router.RegisterRoutes(handler)
 
 	return &router
 }
