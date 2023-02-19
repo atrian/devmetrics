@@ -5,6 +5,7 @@ package agentconfig
 import (
 	"encoding/json"
 	"flag"
+	"net"
 	"os"
 	"time"
 
@@ -36,6 +37,7 @@ type ConfDummy struct {
 
 // AgentConfig конфигурация параметров сбора и отправки метрик
 type AgentConfig struct {
+	AgentIP        net.IP        // AgentIP адрес агента. Определяется при старте
 	CryptoKey      string        `env:"CRYPTO_KEY"`      // CryptoKey путь до файла с публичным ключом
 	HashKey        string        `env:"KEY"`             // HashKey ключ подписи метрик. Если пустой - метрики не подписываются
 	PollInterval   time.Duration `env:"POLL_INTERVAL"`   // PollInterval интервал сбора метрик, по умолчанию 2 секунды

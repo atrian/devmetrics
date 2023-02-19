@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"time"
 
 	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
@@ -93,6 +94,12 @@ func NewAgent() *Agent {
 		metrics: NewMetricsDicts(agentLogger),
 		logger:  agentLogger,
 	}
+
+	err := agent.RefreshAgentIp()
+	if err != nil {
+		agent.logger.Error("Can't get agent IP address", err)
+	}
+
 	return agent
 }
 
@@ -150,4 +157,21 @@ func (a *Agent) Stop(grace chan struct{}) {
 	}
 
 	a.logger.Info("Profiler closed")
+}
+
+// RefreshAgentIp обновляет IP адрес агента в загруженной конфигурации
+func (a *Agent) RefreshAgentIp() error {
+	host, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+
+	IPs, err := net.LookupHost(host)
+	if err != nil {
+		return err
+	}
+
+	a.config.Agent.AgentIP = net.ParseIP(IPs[0])
+	a.logger.Info(fmt.Sprintf("Agent IP loaded: %v", a.config.Agent.AgentIP.String()))
+	return nil
 }

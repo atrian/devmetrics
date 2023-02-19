@@ -191,6 +191,7 @@ func (uploader *Uploader) sendGzippedRequest(body []byte) {
 	}
 
 	// устанавливаем заголовки
+	request.Header.Set("X-Real-IP", uploader.config.Agent.AgentIP.String())
 	request.Header.Set("Content-Type", uploader.config.HTTP.ContentType)
 	request.Header.Set("Content-Encoding", "gzip")
 
