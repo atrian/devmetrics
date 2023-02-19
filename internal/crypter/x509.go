@@ -38,16 +38,16 @@ const (
 )
 
 type KeyManager struct {
-	PrivateKey *rsa.PrivateKey
-	PublicKey  *rsa.PublicKey
+	privateKey *rsa.PrivateKey
+	publicKey  *rsa.PublicKey
 }
 
 // chunk используется для шифрования данных в многопоточном режиме.
 // в зависимости от размера сообщения данные разбиваются на блоки длинной MessageLenLimit (446 байт) при шифровке
 // и EncryptedBlockSize (512 байт) при расшифровке
 type chunk struct {
-	Data  []byte // данные блока
-	Index uint   // индекс блока
+	data  []byte // данные блока
+	index uint   // индекс блока
 }
 
 func New() *KeyManager {
@@ -79,12 +79,12 @@ func (k *KeyManager) ParsePrivateKey(key []byte) (*rsa.PrivateKey, error) {
 
 // RememberPrivateKey кеширование приватного ключа
 func (k *KeyManager) RememberPrivateKey(key *rsa.PrivateKey) {
-	k.PrivateKey = key
+	k.privateKey = key
 }
 
 // ReadyForDecrypt возвращает true если приватный ключ загружен в менеджер
 func (k *KeyManager) ReadyForDecrypt() bool {
-	return k.PrivateKey != nil
+	return k.privateKey != nil
 }
 
 // ReadPublicKey читает публичный ключ с диска, возвращает указатель на структуру rsa.PublicKey
@@ -112,12 +112,12 @@ func (k *KeyManager) ParsePublicKey(key []byte) (*rsa.PublicKey, error) {
 
 // RememberPublicKey кеширование публичного ключа
 func (k *KeyManager) RememberPublicKey(key *rsa.PublicKey) {
-	k.PublicKey = key
+	k.publicKey = key
 }
 
 // ReadyForEncrypt возвращает true если публичный ключ загружен в менеджер
 func (k *KeyManager) ReadyForEncrypt() bool {
-	return k.PublicKey != nil
+	return k.publicKey != nil
 }
 
 // GenerateKeys генерирует пару приватного и публичного ключа длиной 4096 бит
@@ -155,7 +155,7 @@ func (k *KeyManager) GenerateKeys() (publicKey []byte, privateKey []byte, err er
 
 // Encrypt шифрует сообщение с кешированным публичным ключом
 func (k *KeyManager) Encrypt(message []byte) ([]byte, error) {
-	return k.EncryptBigMessage(message, k.PublicKey)
+	return k.EncryptBigMessage(message, k.publicKey)
 }
 
 // EncryptBigMessage разбивает сообщение на чанки по размеру MessageLenLimit
@@ -201,7 +201,7 @@ func (k *KeyManager) EncryptBigMessage(message []byte, key *rsa.PublicKey) ([]by
 	resultBuffer := make([][]byte, chunks)
 	for i := 0; i < chunks; i++ {
 		part := <-chunkCh
-		resultBuffer[part.Index] = part.Data
+		resultBuffer[part.index] = part.data
 	}
 
 	// закарываем канал
@@ -247,8 +247,8 @@ func (k *KeyManager) runEncryptProcess(
 	// шифруем кусок сообщения
 	encPart, defErr := k.EncryptWithKey(messagePart, key)
 	chunkCh <- chunk{
-		Index: uint(index),
-		Data:  encPart,
+		index: uint(index),
+		data:  encPart,
 	}
 }
 
@@ -269,7 +269,7 @@ func (k *KeyManager) EncryptWithKey(message []byte, key *rsa.PublicKey) ([]byte,
 
 // Decrypt расшифровывает сообщение с кешированным приватным ключом
 func (k *KeyManager) Decrypt(message []byte) ([]byte, error) {
-	return k.DecryptBigMessage(message, k.PrivateKey)
+	return k.DecryptBigMessage(message, k.privateKey)
 }
 
 // DecryptBigMessage разбивает зашифрованное сообщение на чанки по размеру EncryptedBlockSize
@@ -315,7 +315,7 @@ func (k *KeyManager) DecryptBigMessage(message []byte, key *rsa.PrivateKey) ([]b
 	resultBuffer := make([][]byte, chunks)
 	for i := 0; i < chunks; i++ {
 		part := <-chunkCh
-		resultBuffer[part.Index] = part.Data
+		resultBuffer[part.index] = part.data
 	}
 
 	// закарываем канал
@@ -361,8 +361,8 @@ func (k *KeyManager) runDecryptProcess(
 	// шифруем кусок сообщения
 	encPart, defErr := k.DecryptWithKey(messagePart, key)
 	chunkCh <- chunk{
-		Index: uint(index),
-		Data:  encPart,
+		index: uint(index),
+		data:  encPart,
 	}
 }
 
