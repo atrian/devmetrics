@@ -4,5 +4,6 @@
   "store_interval": "60s",
   "store_file": "tpm",
   "database_dsn": "",
-  "crypto_key": ".keys/secret.pem"
+  "crypto_key": ".keys/secret.pem",
+  "trusted_subnet": ""
 }

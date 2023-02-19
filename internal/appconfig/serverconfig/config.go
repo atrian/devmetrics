@@ -20,6 +20,7 @@ var (
 	cryptoKey     *string
 	dsn           *string
 	jsonConf      *string
+	trustedSubnet *string
 	storeInterval *time.Duration
 	restore       *bool
 	profile       *bool
@@ -39,6 +40,7 @@ type ConfDummy struct {
 	StoreFile     string `json:"store_file,omitempty"`
 	DatabaseDsn   string `json:"database_dsn,omitempty"`
 	CryptoKey     string `json:"crypto_key,omitempty"`
+	TrustedSubnet string `json:"trusted_subnet,omitempty"`
 	Restore       bool   `json:"restore,omitempty"`
 }
 
@@ -49,6 +51,7 @@ type ServerConfig struct {
 	HashKey            string        `env:"KEY"`            // HashKey ключ для проверки подписи метрик
 	CryptoKey          string        `env:"CRYPTO_KEY"`     // CryptoKey путь до файла с приватным ключом
 	DBDSN              string        `env:"DATABASE_DSN"`   // DBDSN строка соединения с базой данных (PGSQL)
+	TrustedSubnet      string        `env:"TRUSTED_SUBNET"` // TrustedSubnet Получение метрик только из доверенной сети. Принимает строковое представление бесклассовой адресации (CIDR)
 	StoreInterval      time.Duration `env:"STORE_INTERVAL"` // StoreInterval интервал сохранения накопленных метрик в файл на диске, по умолчанию раз в 5 минут
 	Restore            bool          `env:"RESTORE"`        // Restore флаг периодического сброса накопленных метрик в файл на диск
 	ProfileApp         bool          // ProfileApp флаг разрешающий маршруты для просмотра профиля pprof приложения
@@ -150,6 +153,7 @@ func (config *Config) loadJSONConfiguration() {
 	config.Server.Restore = dummy.Restore
 	config.Server.StoreFile = dummy.StoreFile
 	config.Server.DBDSN = dummy.DatabaseDsn
+	config.Server.TrustedSubnet = dummy.TrustedSubnet
 	config.Server.CryptoKey = dummy.CryptoKey
 
 	parsedStoreInterval, _ := time.ParseDuration(dummy.StoreInterval)
@@ -185,6 +189,7 @@ func (config *Config) parseFlags() {
 	hashKey = flag.String("k", "", "Key for metrics sign validation")
 	cryptoKey = flag.String("crypto-key", config.Server.CryptoKey, "Path to private PEM key")
 	dsn = flag.String("d", config.Server.DBDSN, "DSN for PostgreSQL server")
+	trustedSubnet = flag.String("t", config.Server.TrustedSubnet, "Accept metrics only from trusted network. CIDR.")
 	profile = flag.Bool("p", false, "Enable pprof profiler")
 
 	flag.Parse()
@@ -218,6 +223,10 @@ func (config *Config) loadServerFlags() {
 
 	if isFlagPassed("d") {
 		config.Server.DBDSN = *dsn
+	}
+
+	if isFlagPassed("t") {
+		config.Server.TrustedSubnet = *trustedSubnet
 	}
 
 	if isFlagPassed("p") {
