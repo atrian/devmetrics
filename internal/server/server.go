@@ -9,7 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/atrian/devmetrics/internal/server/grpc_handlers"
+	"github.com/atrian/devmetrics/internal/server/grpcHandlers"
 	"google.golang.org/grpc"
 	"log"
 	"net"
@@ -112,7 +112,7 @@ func (s *Server) runGRPCServer(ctx context.Context) {
 	// создаём gRPC-сервер без зарегистрированной службы
 	s.grpc = grpc.NewServer()
 	// регистрируем сервис
-	ms := grpc_handlers.NewMetricServer(s.storage, s.logger)
+	ms := grpcHandlers.NewMetricServer(s.storage, s.logger)
 	pb.RegisterDevMetricsServer(s.grpc, ms)
 
 	s.logger.Info("GRPC server started")

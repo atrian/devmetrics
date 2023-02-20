@@ -33,7 +33,6 @@ func TrustedSubnetMW(trustedSubnet string) func(http.Handler) http.Handler {
 			// иначе сбрасываем соединение
 			log.Printf("Drop connection for Ip: %v", agentIp.String())
 			dropConnection(w)
-			return
 		})
 	}
 }

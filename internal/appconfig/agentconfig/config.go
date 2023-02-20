@@ -5,8 +5,10 @@ package agentconfig
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v6"
@@ -206,6 +208,7 @@ func (config *Config) selectProtocol() {
 	if config.Transport.AddressGRPC != "" {
 		config.Transport.Protocol = "grpc"
 	}
+	config.logger.Info(fmt.Sprintf("Agent transport protocol: %v", strings.ToUpper(config.Transport.Protocol)))
 }
 
 // isFlagPassed проверка указан ли флан при запуске программы
