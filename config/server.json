@@ -1,5 +1,6 @@
 {
   "address": "localhost:8080",
+  "address_grpc": "localhost:65530",
   "restore": true,
   "store_interval": "60s",
   "store_file": "tpm",

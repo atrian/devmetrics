@@ -1,6 +1,6 @@
 {
   "address": "localhost:8080",
-  "address_grpc": "",
+  "address_grpc": "localhost:65530",
   "report_interval": "10s",
   "poll_interval": "5s",
   "crypto_key": ".keys/pub.pem"
