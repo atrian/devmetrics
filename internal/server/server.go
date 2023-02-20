@@ -92,7 +92,7 @@ func (s *Server) Run(ctx context.Context) {
 	s.logger.Info(fmt.Sprintf("Starting server @ %v", s.config.HTTP.Address))
 
 	api := handlers.New(s.config, s.storage, s.logger)
-	routes := router.New(api, customMiddlewares)
+	routes := router.New(api, customMiddlewares, s.config)
 	// Разрешаем роуты профайлера, если разрешено конфигурацией
 	if s.config.Server.ProfileApp {
 		routes.Mount("/debug", middleware.Profiler())

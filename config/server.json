@@ -5,5 +5,5 @@
   "store_file": "tpm",
   "database_dsn": "",
   "crypto_key": ".keys/secret.pem",
-  "trusted_subnet": ""
+  "trusted_subnet": "192.168.31.0/24"
 }
