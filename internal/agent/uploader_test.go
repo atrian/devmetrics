@@ -42,7 +42,7 @@ func TestUploader_buildStatUploadURL(t *testing.T) {
 			},
 			want: fmt.Sprintf("%v://%v/updates/",
 				config.Transport.Protocol,
-				config.Transport.Address,
+				config.Transport.AddressHTTP,
 			),
 		},
 	}

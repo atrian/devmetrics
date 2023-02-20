@@ -48,8 +48,8 @@ type AgentConfig struct {
 // TransportConfig конфигурация транспорта
 type TransportConfig struct {
 	Protocol    string // Protocol протокол передачи, по умолчанию http
-	Address     string `env:"ADDRESS"`      // Address адрес сервера, по умолчанию 127.0.0.1:8080
-	AddressGRPC string `env:"ADDRESS_GRPC"` // AddressGRPC адрес GRPC сервера, по умолчанию 127.0.0.1:9876
+	AddressHTTP string `env:"ADDRESS"`      // AddressHTTP адрес WEB сервера, по умолчанию 127.0.0.1:8080
+	AddressGRPC string `env:"ADDRESS_GRPC"` // AddressGRPC адрес GRPC сервера
 	URLTemplate string // URLTemplate шаблон, по умолчанию %v://%v/
 	ContentType string // ContentType по умолчанию application/json
 }
@@ -85,7 +85,7 @@ func (config *Config) loadAgentConfig() {
 func (config *Config) loadHTTPConfig() {
 	config.Transport = TransportConfig{
 		Protocol:    "http",
-		Address:     "127.0.0.1:8080",
+		AddressHTTP: "127.0.0.1:8080",
 		URLTemplate: "%v://%v/",
 		ContentType: "application/json",
 	}
@@ -96,8 +96,8 @@ func (config *Config) parseFlags() {
 	jsonConf = flag.String("config", "", "Path to JSON configuration file")
 	flag.StringVar(jsonConf, "c", *jsonConf, "alias for -config")
 
-	address = flag.String("a", "127.0.0.1:8080", "Address and port used for agent.")
-	addressGrpc = flag.String("ag", "127.0.0.1:9876", "Address and port used for GRPC connection.")
+	address = flag.String("a", "127.0.0.1:8080", "AddressHTTP and port used for agent.")
+	addressGrpc = flag.String("ag", "127.0.0.1:9876", "AddressHTTP and port used for GRPC connection.")
 	reportInterval = flag.Duration("r", 10*time.Second, "Metrics upload interval in seconds.")
 	pollInterval = flag.Duration("p", 2*time.Second, "Metrics pool interval.")
 	hashKey = flag.String("k", "", "Key for metrics sign")
@@ -109,7 +109,7 @@ func (config *Config) parseFlags() {
 // loadAgentFlags загрузка конфигурации из флагов
 func (config *Config) loadAgentFlags() {
 	if isFlagPassed("a") {
-		config.Transport.Address = *address
+		config.Transport.AddressHTTP = *address
 	}
 
 	if isFlagPassed("ag") {
@@ -174,7 +174,7 @@ func (config *Config) loadJSONConfiguration() {
 		config.logger.Fatal("loadJSONConfiguration json.Decode error", err)
 	}
 
-	config.Transport.Address = dummy.Address
+	config.Transport.AddressHTTP = dummy.Address
 	config.Transport.AddressGRPC = dummy.AddressGRPC
 	config.Agent.CryptoKey = dummy.CryptoKey
 

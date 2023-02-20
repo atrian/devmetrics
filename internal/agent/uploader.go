@@ -21,7 +21,7 @@ import (
 
 // Uploader отправляет данные метрик и счетчиков на удаленный сервер
 type Uploader struct {
-	HTTPClient     *http.Client        // HTTPClient клиент для HTTP транспорта
+	HTTPClient     *http.Client        // HTTPClient клиент для Transport транспорта
 	GRPCClient     pb.DevMetricsClient // GRPCClient клиент для GRPC транспорта
 	GRPCConnection *grpc.ClientConn    // GRPCConnection GRPC соединение
 	config         *agentconfig.Config // config конфигурация приложения
@@ -142,7 +142,7 @@ func (uploader *Uploader) encryptData(data []byte) ([]byte, error) {
 // SendAllStats отправка всех метрик на сервер
 func (uploader *Uploader) SendAllStats(metrics *MetricsDics) {
 	if uploader.config.Transport.Protocol == "grpc" {
-
+		uploader.sendStatsViaGrpc(metrics)
 	} else {
 		uploader.sendStatsViaHttp(metrics)
 	}
@@ -180,7 +180,7 @@ func (uploader *Uploader) sendStatsViaGrpc(metrics *MetricsDics) {
 	}
 }
 
-// sendStatsViaHttp Отправка статистики по протоколу HTTP. С шифрованием и сжатием Gzip
+// sendStatsViaHttp Отправка статистики по протоколу Transport. С шифрованием и сжатием Gzip
 func (uploader *Uploader) sendStatsViaHttp(metrics *MetricsDics) {
 	// маршалим данные в JSON
 	data, err := uploader.marshallMetrics(metrics)
@@ -277,7 +277,7 @@ func (uploader *Uploader) buildStatUploadURL() string {
 
 	return fmt.Sprintf(uploader.config.Transport.URLTemplate,
 		uploader.config.Transport.Protocol,
-		uploader.config.Transport.Address) + "update/"
+		uploader.config.Transport.AddressHTTP) + "update/"
 }
 
 // buildStatsUploadURL построение целевого адреса для массовой отправки метрик
@@ -288,5 +288,5 @@ func (uploader *Uploader) buildStatsUploadURL() string {
 
 	return fmt.Sprintf(uploader.config.Transport.URLTemplate,
 		uploader.config.Transport.Protocol,
-		uploader.config.Transport.Address) + "updates/"
+		uploader.config.Transport.AddressHTTP) + "updates/"
 }

@@ -47,7 +47,7 @@ func (a *Agent) Run(ctx context.Context) {
 		fmt.Sprintf("Agent started. PollInterval: %v, ReportInterval: %v, Server address: %v",
 			a.config.Agent.PollInterval,
 			a.config.Agent.ReportInterval,
-			a.config.Transport.Address))
+			a.config.Transport.AddressHTTP))
 
 	// запускаем тикер сбора статистики
 	refreshStatsTicker := time.NewTicker(a.config.Agent.PollInterval)
