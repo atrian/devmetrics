@@ -21,7 +21,7 @@ import (
 
 // Uploader отправляет данные метрик и счетчиков на удаленный сервер
 type Uploader struct {
-	HTTPClient     *http.Client        // HTTPClient клиент для Transport транспорта
+	HTTPClient     *http.Client        // HTTPClient клиент для HTTP транспорта
 	GRPCClient     pb.DevMetricsClient // GRPCClient клиент для GRPC транспорта
 	GRPCConnection *grpc.ClientConn    // GRPCConnection GRPC соединение
 	config         *agentconfig.Config // config конфигурация приложения
@@ -280,10 +280,6 @@ func (uploader *Uploader) sendGzippedRequest(body []byte) {
 // buildStatUploadURL построение целевого адреса для отправки одной метрики
 // Deprecated: отправка одной метрики больше не используется, применяйте buildStatsUploadURL
 func (uploader *Uploader) buildStatUploadURL() string {
-	if uploader.config.Transport.Protocol == "grpc" {
-		return uploader.config.Transport.AddressGRPC
-	}
-
 	return fmt.Sprintf(uploader.config.Transport.URLTemplate,
 		uploader.config.Transport.Protocol,
 		uploader.config.Transport.AddressHTTP) + "update/"
@@ -291,10 +287,6 @@ func (uploader *Uploader) buildStatUploadURL() string {
 
 // buildStatsUploadURL построение целевого адреса для массовой отправки метрик
 func (uploader *Uploader) buildStatsUploadURL() string {
-	if uploader.config.Transport.Protocol == "grpc" {
-		return uploader.config.Transport.AddressGRPC
-	}
-
 	return fmt.Sprintf(uploader.config.Transport.URLTemplate,
 		uploader.config.Transport.Protocol,
 		uploader.config.Transport.AddressHTTP) + "updates/"

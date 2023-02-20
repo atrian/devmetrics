@@ -120,7 +120,7 @@ func (a *Agent) RunProfiler() {
 
 	if profilerErr := a.profiler.Serve(listener); profilerErr != http.ErrServerClosed {
 		// ошибки старта или остановки Listener
-		a.logger.Fatal("Transport server ListenAndServe: %v", profilerErr)
+		a.logger.Error("Profiler server ListenAndServe: %v", profilerErr)
 	}
 }
 
@@ -157,7 +157,7 @@ func (a *Agent) Stop(grace chan struct{}) {
 	// Завершаем сервер профилирования
 	if err := a.profiler.Shutdown(context.Background()); err != nil {
 		// ошибки закрытия Listener
-		a.logger.Error("Transport server Shutdown err", err)
+		a.logger.Error("Profiler server Shutdown err", err)
 	}
 
 	// закрываем GRPC соединение

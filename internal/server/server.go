@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"google.golang.org/grpc"
-	"log"
 	"net"
 	"net/http"
 
@@ -119,7 +118,7 @@ func (s *Server) runGRPCServer(ctx context.Context) {
 
 	// получаем запрос gRPC
 	if err = s.grpc.Serve(listen); err != nil {
-		log.Fatal(err)
+		s.logger.Fatal("grpc.Serve error", err)
 	}
 }
 
