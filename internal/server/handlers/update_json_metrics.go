@@ -105,7 +105,7 @@ func (h *Handler) UpdateJSONMetrics() http.HandlerFunc {
 			responseMetrics = append(responseMetrics, metric)
 		}
 
-		w.Header().Set("content-type", h.config.HTTP.ContentType)
+		w.Header().Set("content-type", h.config.Transport.ContentType)
 		// устанавливаем статус-код 200
 		w.WriteHeader(http.StatusOK)
 		h.logger.Debug("Request OK")

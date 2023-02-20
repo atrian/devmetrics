@@ -1,5 +1,5 @@
 // Package serverconfig Конфигурация сервера хранения метрик.
-// Содержит адрес сервера, dsn соединения с БД, ключ для проверки цифровых подписей метрик, флаг профилирования
+// Содержит адрес web сервера, grpc сервера, dsn соединения с БД, ключ для проверки цифровых подписей метрик, флаг профилирования
 package serverconfig
 
 import (
@@ -15,6 +15,7 @@ import (
 
 var (
 	address       *string
+	addressGrpc   *string
 	file          *string
 	hashKey       *string
 	cryptoKey     *string
@@ -28,14 +29,15 @@ var (
 
 // Config конфигурация сервера приема метрик
 type Config struct {
-	HTTP   HTTPConfig
-	logger logger.Logger
-	Server ServerConfig
+	Transport TransportConfig
+	Server    ServerConfig
+	logger    logger.Logger
 }
 
 // ConfDummy шаблон для парсинга JSON конфигурации
 type ConfDummy struct {
 	Address       string `json:"address,omitempty"`
+	AddressGRPC   string `json:"address_grpc,omitempty"`
 	StoreInterval string `json:"store_interval,omitempty"`
 	StoreFile     string `json:"store_file,omitempty"`
 	DatabaseDsn   string `json:"database_dsn,omitempty"`
@@ -57,9 +59,10 @@ type ServerConfig struct {
 	ProfileApp         bool          // ProfileApp флаг разрешающий маршруты для просмотра профиля pprof приложения
 }
 
-// HTTPConfig конфигурация старта веб сервера для приема запросов
-type HTTPConfig struct {
-	Address     string `env:"ADDRESS"` // Address адрес сервера
+// TransportConfig конфигурация старта веб сервера для приема запросов
+type TransportConfig struct {
+	AddressHTTP string `env:"ADDRESS"`      // AddressHTTP адрес WEB сервера
+	AddressGRPC string `env:"ADDRESS_GRPC"` // AddressGRPC адрес GRPC сервера
 	ContentType string // ContentType устанавливается в заголовках ответа
 }
 
@@ -70,7 +73,7 @@ func NewServerConfig(logger logger.Logger) *Config {
 		logger: logger,
 	}
 	conf.loadServerConfig()
-	conf.loadHTTPConfig()
+	conf.loadTransportConfig()
 	conf.parseFlags()
 	conf.loadJSONConfiguration()
 	conf.loadServerFlags()
@@ -87,7 +90,7 @@ func NewServerConfigWithoutFlags(logger logger.Logger) *Config {
 		logger: logger,
 	}
 	conf.loadServerConfig()
-	conf.loadHTTPConfig()
+	conf.loadTransportConfig()
 	conf.loadServerEnvConfiguration()
 	return &conf
 }
@@ -101,9 +104,10 @@ func (config *Config) loadServerConfig() {
 	}
 }
 
-func (config *Config) loadHTTPConfig() {
-	config.HTTP = HTTPConfig{
-		Address:     "127.0.0.1:8080",
+func (config *Config) loadTransportConfig() {
+	config.Transport = TransportConfig{
+		AddressHTTP: "127.0.0.1:8080",
+		AddressGRPC: "localhost:65530",
 		ContentType: "application/json",
 	}
 }
@@ -149,7 +153,8 @@ func (config *Config) loadJSONConfiguration() {
 		config.logger.Fatal("loadJSONConfiguration json.Decode error", err)
 	}
 
-	config.HTTP.Address = dummy.Address
+	config.Transport.AddressHTTP = dummy.Address
+	config.Transport.AddressGRPC = dummy.AddressGRPC
 	config.Server.Restore = dummy.Restore
 	config.Server.StoreFile = dummy.StoreFile
 	config.Server.DBDSN = dummy.DatabaseDsn
@@ -166,7 +171,7 @@ func (config *Config) loadJSONConfiguration() {
 func (config *Config) loadServerEnvConfiguration() {
 	config.logger.Info("Load env configuration")
 
-	err := env.Parse(&config.HTTP)
+	err := env.Parse(&config.Transport)
 	if err != nil {
 		config.logger.Fatal("loadServerEnvConfiguration env.Parse config.Transport", err)
 	}
@@ -182,7 +187,8 @@ func (config *Config) parseFlags() {
 	jsonConf = flag.String("config", "", "Path to JSON configuration file")
 	flag.StringVar(jsonConf, "c", *jsonConf, "alias for -config")
 
-	address = flag.String("a", config.HTTP.Address, "Address and port used for server and agent.")
+	address = flag.String("a", config.Transport.AddressHTTP, "AddressHTTP host & port used for web server and agent.")
+	addressGrpc = flag.String("ag", config.Transport.AddressGRPC, "AddressGRPC host & port used for grpc server and agent.")
 	file = flag.String("f", config.Server.StoreFile, "Where to store metrics dump file.")
 	restore = flag.Bool("r", config.Server.Restore, "Restore metrics from dump file on server start.")
 	storeInterval = flag.Duration("i", config.Server.StoreInterval, "Metrics dump interval in seconds.")
@@ -198,7 +204,11 @@ func (config *Config) parseFlags() {
 // loadServerFlags загрузка конфигурации из флагов
 func (config *Config) loadServerFlags() {
 	if isFlagPassed("a") {
-		config.HTTP.Address = *address
+		config.Transport.AddressHTTP = *address
+	}
+
+	if isFlagPassed("ag") {
+		config.Transport.AddressGRPC = *addressGrpc
 	}
 
 	if isFlagPassed("f") {

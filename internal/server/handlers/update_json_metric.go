@@ -61,7 +61,7 @@ func (h *Handler) UpdateJSONMetric() http.HandlerFunc {
 			http.Error(w, "Cant store metric", http.StatusBadRequest)
 		}
 
-		w.Header().Set("content-type", h.config.HTTP.ContentType)
+		w.Header().Set("content-type", h.config.Transport.ContentType)
 		// устанавливаем статус-код 200
 		w.WriteHeader(http.StatusOK)
 
