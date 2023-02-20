@@ -107,6 +107,13 @@ func (uploader *Uploader) SendStat(metrics *MetricsDics) {
 
 // MarshallMetrics маршалит текущие значения метрик данные в JSON
 func (uploader *Uploader) marshallMetrics(metrics *MetricsDics) ([]byte, error) {
+	exportedMetrics := uploader.signMetrics(metrics)
+	jsonMetrics, err := json.Marshal(exportedMetrics)
+	return jsonMetrics, err
+}
+
+// signMetrics подписывает метрики хешом перед отправкой
+func (uploader *Uploader) signMetrics(metrics *MetricsDics) *[]dto.Metrics {
 	// создаем функцию-декоратор для того чтобы не тащить хешер и конфиг в другой слой приложения напрямую
 	configuredHasher := func(metricType, id string, delta *int64, value *float64) string {
 		switch metricType {
@@ -121,13 +128,10 @@ func (uploader *Uploader) marshallMetrics(metrics *MetricsDics) ([]byte, error) 
 		}
 	}
 
-	exportedMetrics := metrics.exportMetrics(configuredHasher)
-
-	jsonMetrics, err := json.Marshal(exportedMetrics)
-
-	return jsonMetrics, err
+	return metrics.exportMetrics(configuredHasher)
 }
 
+// encryptData шифрует метрику для передачи по HTTP
 func (uploader *Uploader) encryptData(data []byte) ([]byte, error) {
 	if uploader.config.Agent.CryptoKey != "" {
 		secureData, err := uploader.crypter.Encrypt(data)
@@ -152,26 +156,31 @@ func (uploader *Uploader) SendAllStats(metrics *MetricsDics) {
 func (uploader *Uploader) sendStatsViaGrpc(metrics *MetricsDics) {
 	var upsertMetricsRequest pb.UpsertMetricsRequest
 
-	for ID, gaugeMetric := range metrics.GaugeDict {
-		upsertMetricsRequest.Metrics = append(upsertMetricsRequest.Metrics, &pb.Metric{
-			Type: &pb.Metric_Gauge{
-				Gauge: &pb.Gauge{
-					ID:    ID,
-					Value: gaugeMetric.getGaugeValue(),
-				},
-			},
-		})
-	}
+	// TODO добавить подпись метрик в PROTO?
+	exportedMetrics := uploader.signMetrics(metrics)
 
-	for ID, counterMetric := range metrics.CounterDict {
-		upsertMetricsRequest.Metrics = append(upsertMetricsRequest.Metrics, &pb.Metric{
-			Type: &pb.Metric_Counter{
-				Counter: &pb.Counter{
-					ID:    ID,
-					Delta: counterMetric.getCounterValue(),
+	for _, metric := range *exportedMetrics {
+		switch metric.MType {
+		case "gauge":
+			upsertMetricsRequest.Metrics = append(upsertMetricsRequest.Metrics, &pb.Metric{
+				Type: &pb.Metric_Gauge{
+					Gauge: &pb.Gauge{
+						ID:    metric.ID,
+						Value: *metric.Value,
+					},
 				},
-			},
-		})
+			})
+		case "counter":
+			upsertMetricsRequest.Metrics = append(upsertMetricsRequest.Metrics, &pb.Metric{
+				Type: &pb.Metric_Counter{
+					Counter: &pb.Counter{
+						ID:    metric.ID,
+						Delta: *metric.Delta,
+					},
+				},
+			})
+		default:
+		}
 	}
 
 	_, err := uploader.GRPCClient.UpdateMetrics(context.Background(), &upsertMetricsRequest)
