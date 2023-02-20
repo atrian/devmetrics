@@ -12,12 +12,14 @@ func TrustedSubnetMW(trustedSubnet string) func(http.Handler) http.Handler {
 			// При пустом значении переменной trusted_subnet метрики должны обрабатываться сервером без дополнительных ограничений
 			if trustedSubnet == "" {
 				next.ServeHTTP(w, r)
+				return
 			}
 
 			// Если парсинг безопасной сети выдает ошибку, передаем запрос дальше
 			_, ipNet, err := net.ParseCIDR(trustedSubnet)
 			if err != nil {
 				next.ServeHTTP(w, r)
+				return
 			}
 
 			// Если адрес входит в список доверенных, передаем запрос дальше
@@ -25,6 +27,7 @@ func TrustedSubnetMW(trustedSubnet string) func(http.Handler) http.Handler {
 			log.Printf("agentIp: %v, trusted network: %v", agentIp.String(), ipNet.String())
 			if agentIp != nil && ipNet.Contains(agentIp) {
 				next.ServeHTTP(w, r)
+				return
 			}
 
 			// иначе сбрасываем соединение
