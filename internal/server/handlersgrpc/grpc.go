@@ -1,4 +1,4 @@
-package grpcHandlers
+package handlersgrpc
 
 import (
 	"github.com/atrian/devmetrics/internal/server/storage"
