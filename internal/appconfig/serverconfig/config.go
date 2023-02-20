@@ -168,7 +168,7 @@ func (config *Config) loadServerEnvConfiguration() {
 
 	err := env.Parse(&config.HTTP)
 	if err != nil {
-		config.logger.Fatal("loadServerEnvConfiguration env.Parse config.HTTP", err)
+		config.logger.Fatal("loadServerEnvConfiguration env.Parse config.Transport", err)
 	}
 
 	err = env.Parse(&config.Server)

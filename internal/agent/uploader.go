@@ -3,24 +3,31 @@ package agent
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/atrian/devmetrics/internal/appconfig/agentconfig"
 	"github.com/atrian/devmetrics/internal/crypter"
 	"github.com/atrian/devmetrics/internal/dto"
 	"github.com/atrian/devmetrics/internal/signature"
 	"github.com/atrian/devmetrics/pkg/logger"
+	pb "github.com/atrian/devmetrics/proto"
 )
 
 // Uploader отправляет данные метрик и счетчиков на удаленный сервер
 type Uploader struct {
-	client  *http.Client
-	config  *agentconfig.Config // config конфигурация приложения
-	hasher  signature.Hasher    // hasher подпись метрик
-	crypter crypter.Crypter     // crypter отправка шифрованных данных
-	logger  logger.Logger
+	HTTPClient     *http.Client        // HTTPClient клиент для HTTP транспорта
+	GRPCClient     pb.DevMetricsClient // GRPCClient клиент для GRPC транспорта
+	GRPCConnection *grpc.ClientConn    // GRPCConnection GRPC соединение
+	config         *agentconfig.Config // config конфигурация приложения
+	hasher         signature.Hasher    // hasher подпись метрик
+	crypter        crypter.Crypter     // crypter отправка шифрованных данных
+	logger         logger.Logger
 }
 
 // NewUploader принимает конфигурацию и логгер, подключает зависимости:
@@ -36,12 +43,25 @@ func NewUploader(config *agentconfig.Config, logger logger.Logger) *Uploader {
 	}
 
 	uploader := Uploader{
-		client:  &http.Client{},
-		config:  config,
-		hasher:  signature.NewSha256Hasher(),
-		crypter: keyManager,
-		logger:  logger,
+		HTTPClient: &http.Client{},
+		config:     config,
+		hasher:     signature.NewSha256Hasher(),
+		crypter:    keyManager,
+		logger:     logger,
 	}
+
+	// Инициализируем GRPC клиент, если выбран соответствующий протокол
+	if config.Transport.Protocol == "grpc" {
+		// устанавливаем соединение с сервером
+		conn, err := grpc.Dial(config.Transport.AddressGRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal("Can't connect GRPC server", err)
+		}
+
+		uploader.GRPCConnection = conn
+		uploader.GRPCClient = pb.NewDevMetricsClient(conn)
+	}
+
 	return &uploader
 }
 
@@ -121,6 +141,47 @@ func (uploader *Uploader) encryptData(data []byte) ([]byte, error) {
 
 // SendAllStats отправка всех метрик на сервер
 func (uploader *Uploader) SendAllStats(metrics *MetricsDics) {
+	if uploader.config.Transport.Protocol == "grpc" {
+
+	} else {
+		uploader.sendStatsViaHttp(metrics)
+	}
+}
+
+// sendStatsViaGrpc Отправка статистики по протоколу Grpc.
+func (uploader *Uploader) sendStatsViaGrpc(metrics *MetricsDics) {
+	var upsertMetricsRequest pb.UpsertMetricsRequest
+
+	for ID, gaugeMetric := range metrics.GaugeDict {
+		upsertMetricsRequest.Metrics = append(upsertMetricsRequest.Metrics, &pb.Metric{
+			Type: &pb.Metric_Gauge{
+				Gauge: &pb.Gauge{
+					ID:    ID,
+					Value: gaugeMetric.getGaugeValue(),
+				},
+			},
+		})
+	}
+
+	for ID, counterMetric := range metrics.CounterDict {
+		upsertMetricsRequest.Metrics = append(upsertMetricsRequest.Metrics, &pb.Metric{
+			Type: &pb.Metric_Counter{
+				Counter: &pb.Counter{
+					ID:    ID,
+					Delta: counterMetric.getCounterValue(),
+				},
+			},
+		})
+	}
+
+	_, err := uploader.GRPCClient.UpdateMetrics(context.Background(), &upsertMetricsRequest)
+	if err != nil {
+		uploader.logger.Error("GRPCClient.UpdateMetrics failed", err)
+	}
+}
+
+// sendStatsViaHttp Отправка статистики по протоколу HTTP. С шифрованием и сжатием Gzip
+func (uploader *Uploader) sendStatsViaHttp(metrics *MetricsDics) {
 	// маршалим данные в JSON
 	data, err := uploader.marshallMetrics(metrics)
 	if err != nil {
@@ -148,11 +209,11 @@ func (uploader *Uploader) sendRequest(body []byte) {
 	}
 
 	// устанавливаем заголовки
-	request.Header.Set("Content-Type", uploader.config.HTTP.ContentType)
+	request.Header.Set("Content-Type", uploader.config.Transport.ContentType)
 
-	resp, err := uploader.client.Do(request)
+	resp, err := uploader.HTTPClient.Do(request)
 	if err != nil {
-		uploader.logger.Error("sendRequest client.Do", err)
+		uploader.logger.Error("sendRequest HTTPClient.Do", err)
 		return
 	}
 
@@ -192,12 +253,12 @@ func (uploader *Uploader) sendGzippedRequest(body []byte) {
 
 	// устанавливаем заголовки
 	request.Header.Set("X-Real-IP", uploader.config.Agent.AgentIP.String())
-	request.Header.Set("Content-Type", uploader.config.HTTP.ContentType)
+	request.Header.Set("Content-Type", uploader.config.Transport.ContentType)
 	request.Header.Set("Content-Encoding", "gzip")
 
-	resp, err := uploader.client.Do(request)
+	resp, err := uploader.HTTPClient.Do(request)
 	if err != nil {
-		uploader.logger.Error("sendGzippedRequest client.Do", err)
+		uploader.logger.Error("sendGzippedRequest HTTPClient.Do", err)
 		return
 	}
 
@@ -210,14 +271,22 @@ func (uploader *Uploader) sendGzippedRequest(body []byte) {
 // buildStatUploadURL построение целевого адреса для отправки одной метрики
 // Deprecated: отправка одной метрики больше не используется, применяйте buildStatsUploadURL
 func (uploader *Uploader) buildStatUploadURL() string {
-	return fmt.Sprintf(uploader.config.HTTP.URLTemplate,
-		uploader.config.HTTP.Protocol,
-		uploader.config.HTTP.Address) + "update/"
+	if uploader.config.Transport.Protocol == "grpc" {
+		return uploader.config.Transport.AddressGRPC
+	}
+
+	return fmt.Sprintf(uploader.config.Transport.URLTemplate,
+		uploader.config.Transport.Protocol,
+		uploader.config.Transport.Address) + "update/"
 }
 
 // buildStatsUploadURL построение целевого адреса для массовой отправки метрик
 func (uploader *Uploader) buildStatsUploadURL() string {
-	return fmt.Sprintf(uploader.config.HTTP.URLTemplate,
-		uploader.config.HTTP.Protocol,
-		uploader.config.HTTP.Address) + "updates/"
+	if uploader.config.Transport.Protocol == "grpc" {
+		return uploader.config.Transport.AddressGRPC
+	}
+
+	return fmt.Sprintf(uploader.config.Transport.URLTemplate,
+		uploader.config.Transport.Protocol,
+		uploader.config.Transport.Address) + "updates/"
 }

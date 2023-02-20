@@ -31,6 +31,8 @@ type Agent struct {
 	config *agentconfig.Config
 	// metrics in memory хранилище для собираемых метрик
 	metrics *MetricsDics
+	// uploader для загрузки метрик на сервер
+	uploader *Uploader
 	// logger интерфейс логгера, в приложении используется ZAP логгер
 	logger logger.Logger
 	// profiler сервер профилировщика
@@ -45,7 +47,7 @@ func (a *Agent) Run(ctx context.Context) {
 		fmt.Sprintf("Agent started. PollInterval: %v, ReportInterval: %v, Server address: %v",
 			a.config.Agent.PollInterval,
 			a.config.Agent.ReportInterval,
-			a.config.HTTP.Address))
+			a.config.Transport.Address))
 
 	// запускаем тикер сбора статистики
 	refreshStatsTicker := time.NewTicker(a.config.Agent.PollInterval)
@@ -89,10 +91,13 @@ func NewAgent() *Agent {
 	agentLogger := logger.NewZapLogger()
 	defer agentLogger.Sync()
 
+	config := agentconfig.NewConfig(agentLogger)
+
 	agent := &Agent{
-		config:  agentconfig.NewConfig(agentLogger),
-		metrics: NewMetricsDicts(agentLogger),
-		logger:  agentLogger,
+		config:   config,
+		metrics:  NewMetricsDicts(agentLogger),
+		uploader: NewUploader(config, agentLogger),
+		logger:   agentLogger,
 	}
 
 	err := agent.RefreshAgentIp()
@@ -115,7 +120,7 @@ func (a *Agent) RunProfiler() {
 
 	if profilerErr := a.profiler.Serve(listener); profilerErr != http.ErrServerClosed {
 		// ошибки старта или остановки Listener
-		a.logger.Fatal("HTTP server ListenAndServe: %v", profilerErr)
+		a.logger.Fatal("Transport server ListenAndServe: %v", profilerErr)
 	}
 }
 
@@ -137,8 +142,7 @@ func (a *Agent) RefreshGopsStats() {
 
 // UploadStats отправка метрик на сервер
 func (a *Agent) UploadStats() {
-	uploader := NewUploader(a.config, a.logger)
-	uploader.SendAllStats(a.metrics)
+	a.uploader.SendAllStats(a.metrics)
 	a.logger.Info("Upload stats")
 }
 
@@ -153,7 +157,15 @@ func (a *Agent) Stop(grace chan struct{}) {
 	// Завершаем сервер профилирования
 	if err := a.profiler.Shutdown(context.Background()); err != nil {
 		// ошибки закрытия Listener
-		a.logger.Error("HTTP server Shutdown err", err)
+		a.logger.Error("Transport server Shutdown err", err)
+	}
+
+	// закрываем GRPC соединение
+	if a.uploader.GRPCConnection != nil {
+		err := a.uploader.GRPCConnection.Close()
+		if err != nil {
+			a.logger.Error("Error on GRPC connection close", err)
+		}
 	}
 
 	a.logger.Info("Profiler closed")
