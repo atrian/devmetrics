@@ -32,7 +32,7 @@ func (suite *HandlersTestSuite) SetupSuite() {
 	suite.logger = logger.NewZapLogger()
 	suite.config = serverconfig.NewServerConfig(suite.logger)
 	suite.storage = storage.NewMemoryStorage(suite.config, suite.logger)
-	suite.router = router.New(handlers.New(suite.config, suite.storage, suite.logger), nil)
+	suite.router = router.New(handlers.New(suite.config, suite.storage, suite.logger), nil, suite.config)
 }
 
 func (suite *HandlersTestSuite) TestUpdateHandlers() {
@@ -129,7 +129,7 @@ func ExampleHandler_UpdateMetric() {
 	appLogger := logger.NewZapLogger()
 	appConf := serverconfig.NewServerConfigWithoutFlags(appLogger)
 	memStorage := storage.NewMemoryStorage(appConf, appLogger)
-	r := router.New(handlers.New(appConf, memStorage, appLogger), nil)
+	r := router.New(handlers.New(appConf, memStorage, appLogger), nil, appConf)
 
 	// Запускаем тестовый сервер
 	testServer := httptest.NewServer(r)
@@ -170,7 +170,7 @@ func ExampleHandler_UpdateJSONMetrics() {
 	appLogger := logger.NewZapLogger()
 	appConf := serverconfig.NewServerConfigWithoutFlags(appLogger)
 	memStorage := storage.NewMemoryStorage(appConf, appLogger)
-	r := router.New(handlers.New(appConf, memStorage, appLogger), nil)
+	r := router.New(handlers.New(appConf, memStorage, appLogger), nil, appConf)
 
 	// Запускаем тестовый сервер
 	testServer := httptest.NewServer(r)
@@ -206,7 +206,7 @@ func ExampleHandler_GetJSONMetric() {
 	appLogger := logger.NewZapLogger()
 	appConf := serverconfig.NewServerConfigWithoutFlags(appLogger)
 	memStorage := storage.NewMemoryStorage(appConf, appLogger)
-	r := router.New(handlers.New(appConf, memStorage, appLogger), nil)
+	r := router.New(handlers.New(appConf, memStorage, appLogger), nil, appConf)
 
 	// Запускаем тестовый сервер
 	testServer := httptest.NewServer(r)
@@ -269,7 +269,7 @@ func ExampleHandler_GetMetric() {
 	appLogger := logger.NewZapLogger()
 	appConf := serverconfig.NewServerConfigWithoutFlags(appLogger)
 	memStorage := storage.NewMemoryStorage(appConf, appLogger)
-	r := router.New(handlers.New(appConf, memStorage, appLogger), nil)
+	r := router.New(handlers.New(appConf, memStorage, appLogger), nil, appConf)
 
 	// Запускаем тестовый сервер
 	testServer := httptest.NewServer(r)
@@ -332,7 +332,7 @@ func ExampleHandler_UpdateJSONMetric() {
 	appLogger := logger.NewZapLogger()
 	appConf := serverconfig.NewServerConfigWithoutFlags(appLogger)
 	memStorage := storage.NewMemoryStorage(appConf, appLogger)
-	r := router.New(handlers.New(appConf, memStorage, appLogger), nil)
+	r := router.New(handlers.New(appConf, memStorage, appLogger), nil, appConf)
 
 	// Запускаем тестовый сервер
 	testServer := httptest.NewServer(r)
