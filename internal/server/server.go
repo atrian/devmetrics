@@ -9,15 +9,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"google.golang.org/grpc"
+	"net"
 	"net/http"
 
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/atrian/devmetrics/internal/appconfig/serverconfig"
 	"github.com/atrian/devmetrics/internal/server/handlers"
+	"github.com/atrian/devmetrics/internal/server/handlersgrpc"
 	"github.com/atrian/devmetrics/internal/server/router"
 	"github.com/atrian/devmetrics/internal/server/storage"
 	"github.com/atrian/devmetrics/pkg/logger"
+	pb "github.com/atrian/devmetrics/proto"
 )
 
 // Server основное приложение сервера.
@@ -27,6 +31,7 @@ type Server struct {
 	storage storage.Repository
 	logger  logger.Logger
 	web     http.Server
+	grpc    *grpc.Server
 }
 
 // NewServer возвращает указатель на Server сконфигурированный со всеми зависимостями:
@@ -84,34 +89,63 @@ func NewServer() *Server {
 //	r.Handle("/pprof/allocs", pprof.Handler("allocs"))
 func (s *Server) Run(ctx context.Context) {
 	graceShutdown := make(chan struct{})
-	go s.graceWatcher(ctx, graceShutdown)
+	go s.graceShutdownWatcher(ctx, graceShutdown)
 
+	// выполняем стартовые процедуры для хранилища
+	s.storage.RunOnStart()
+
+	go s.runWebServer()
+	go s.runGRPCServer(ctx)
+
+	<-graceShutdown
+}
+
+func (s *Server) runGRPCServer(ctx context.Context) {
+	s.logger.Info(fmt.Sprintf("Starting GRPC server @ %v", s.config.Transport.AddressGRPC))
+
+	// определяем порт для сервера
+	listen, err := net.Listen("tcp", s.config.Transport.AddressGRPC)
+	if err != nil {
+		s.logger.Fatal("GRPC net.Listen error", err)
+	}
+	// создаём gRPC-сервер без зарегистрированной службы
+	s.grpc = grpc.NewServer()
+	// регистрируем сервис
+	ms := handlersgrpc.NewMetricServer(s.storage, s.logger)
+	pb.RegisterDevMetricsServer(s.grpc, ms)
+
+	s.logger.Info("GRPC server started")
+
+	// получаем запрос gRPC
+	if err = s.grpc.Serve(listen); err != nil {
+		s.logger.Fatal("grpc.Serve error", err)
+	}
+}
+
+// runWebServer конфигурирование и запуск веб сервера
+func (s *Server) runWebServer() {
 	// слайс для кастомных middlewares
 	var customMiddlewares []func(next http.Handler) http.Handler
 
-	s.logger.Info(fmt.Sprintf("Starting server @ %v", s.config.HTTP.Address))
+	s.logger.Info(fmt.Sprintf("Starting server @ %v", s.config.Transport.AddressHTTP))
 
 	api := handlers.New(s.config, s.storage, s.logger)
-	routes := router.New(api, customMiddlewares)
+	routes := router.New(api, customMiddlewares, s.config)
 	// Разрешаем роуты профайлера, если разрешено конфигурацией
 	if s.config.Server.ProfileApp {
 		routes.Mount("/debug", middleware.Profiler())
 	}
 
-	// выполняем стартовые процедуры для хранилища
-	s.storage.RunOnStart()
-
 	// запуск сервера, по умолчанию с адресом localhost, порт 8080
-	s.web.Addr = s.config.HTTP.Address
+	s.web.Addr = s.config.Transport.AddressHTTP
 	s.web.Handler = routes
 	err := s.web.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {
 		s.logger.Fatal("Server ListenAndServe err", err)
 	}
-	<-graceShutdown
 }
 
-func (s *Server) graceWatcher(ctx context.Context, grace chan struct{}) {
+func (s *Server) graceShutdownWatcher(ctx context.Context, grace chan struct{}) {
 	<-ctx.Done()
 	go func() {
 		s.Stop(grace)
@@ -122,12 +156,18 @@ func (s *Server) graceWatcher(ctx context.Context, grace chan struct{}) {
 func (s *Server) Stop(grace chan struct{}) {
 	defer close(grace)
 
-	// выполняем остановку сервера
+	// выполняем остановку WEB сервера
 	err := s.web.Shutdown(context.Background())
 	if err != nil {
 		s.logger.Error("Server stop error", err)
 	}
-	s.logger.Info("Server shutdown gracefully")
+	s.logger.Info("WEB server shutdown gracefully")
+
+	// GracefulStop stops the gRPC server gracefully. It stops the server from
+	// accepting new connections and RPCs and blocks until all the pending RPCs are
+	// finished.
+	s.grpc.GracefulStop()
+	s.logger.Info("GRPC server shutdown gracefully")
 
 	// выполняем процедуры остановки хранилища
 	s.storage.RunOnClose()

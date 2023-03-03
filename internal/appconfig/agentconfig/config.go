@@ -5,7 +5,10 @@ package agentconfig
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
+	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v6"
@@ -14,21 +17,22 @@ import (
 )
 
 var (
-	address, hashKey, cryptoKey, jsonConf *string
-	reportInterval                        *time.Duration
-	pollInterval                          *time.Duration
+	address, addressGrpc, hashKey, cryptoKey, jsonConf *string
+	reportInterval                                     *time.Duration
+	pollInterval                                       *time.Duration
 )
 
 // Config конфигурация приложения отправки метрик
 type Config struct {
-	HTTP   HTTPConfig // HTTP конфигурация транспорта
-	logger logger.Logger
-	Agent  AgentConfig // Agent конфигурация параметров сбора и отправки
+	Transport TransportConfig // конфигурация транспорта
+	logger    logger.Logger
+	Agent     AgentConfig // Agent конфигурация параметров сбора и отправки
 }
 
 // ConfDummy шаблон для парсинга JSON конфигурации
 type ConfDummy struct {
 	Address        string `json:"address,omitempty"`
+	AddressGRPC    string `json:"address_grpc,omitempty"`
 	ReportInterval string `json:"report_interval,omitempty"`
 	PollInterval   string `json:"poll_interval,omitempty"`
 	CryptoKey      string `json:"crypto_key,omitempty"`
@@ -36,16 +40,18 @@ type ConfDummy struct {
 
 // AgentConfig конфигурация параметров сбора и отправки метрик
 type AgentConfig struct {
+	AgentIP        net.IP        // AgentIP адрес агента. Определяется при старте
 	CryptoKey      string        `env:"CRYPTO_KEY"`      // CryptoKey путь до файла с публичным ключом
 	HashKey        string        `env:"KEY"`             // HashKey ключ подписи метрик. Если пустой - метрики не подписываются
 	PollInterval   time.Duration `env:"POLL_INTERVAL"`   // PollInterval интервал сбора метрик, по умолчанию 2 секунды
 	ReportInterval time.Duration `env:"REPORT_INTERVAL"` // ReportInterval интервал отправки метрик на сервер, по умолчанию 10 секунд
 }
 
-// HTTPConfig конфигурация транспорта
-type HTTPConfig struct {
+// TransportConfig конфигурация транспорта
+type TransportConfig struct {
 	Protocol    string // Protocol протокол передачи, по умолчанию http
-	Address     string `env:"ADDRESS"` // Address адрес сервера, по умолчанию 127.0.0.1:8080
+	AddressHTTP string `env:"ADDRESS"`      // AddressHTTP адрес WEB сервера, по умолчанию 127.0.0.1:8080
+	AddressGRPC string `env:"ADDRESS_GRPC"` // AddressGRPC адрес GRPC сервера
 	URLTemplate string // URLTemplate шаблон, по умолчанию %v://%v/
 	ContentType string // ContentType по умолчанию application/json
 }
@@ -65,6 +71,7 @@ func NewConfig(logger logger.Logger) *Config {
 	config.loadJSONConfiguration()
 	config.loadAgentFlags()
 	config.loadAgentEnvConfiguration()
+	config.selectProtocol() // Если передан адрес GRPC используем его в качестве транспорта
 	return &config
 }
 
@@ -78,9 +85,9 @@ func (config *Config) loadAgentConfig() {
 
 // loadHTTPConfig загрузка конфигурации транспорта по умолчанию
 func (config *Config) loadHTTPConfig() {
-	config.HTTP = HTTPConfig{
+	config.Transport = TransportConfig{
 		Protocol:    "http",
-		Address:     "127.0.0.1:8080",
+		AddressHTTP: "127.0.0.1:8080",
 		URLTemplate: "%v://%v/",
 		ContentType: "application/json",
 	}
@@ -91,7 +98,8 @@ func (config *Config) parseFlags() {
 	jsonConf = flag.String("config", "", "Path to JSON configuration file")
 	flag.StringVar(jsonConf, "c", *jsonConf, "alias for -config")
 
-	address = flag.String("a", "127.0.0.1:8080", "Address and port used for agent.")
+	address = flag.String("a", "127.0.0.1:8080", "AddressHTTP and port used for agent.")
+	addressGrpc = flag.String("ag", "127.0.0.1:9876", "AddressHTTP and port used for GRPC connection.")
 	reportInterval = flag.Duration("r", 10*time.Second, "Metrics upload interval in seconds.")
 	pollInterval = flag.Duration("p", 2*time.Second, "Metrics pool interval.")
 	hashKey = flag.String("k", "", "Key for metrics sign")
@@ -103,7 +111,11 @@ func (config *Config) parseFlags() {
 // loadAgentFlags загрузка конфигурации из флагов
 func (config *Config) loadAgentFlags() {
 	if isFlagPassed("a") {
-		config.HTTP.Address = *address
+		config.Transport.AddressHTTP = *address
+	}
+
+	if isFlagPassed("ag") {
+		config.Transport.AddressGRPC = *addressGrpc
 	}
 
 	if isFlagPassed("r") {
@@ -164,7 +176,8 @@ func (config *Config) loadJSONConfiguration() {
 		config.logger.Fatal("loadJSONConfiguration json.Decode error", err)
 	}
 
-	config.HTTP.Address = dummy.Address
+	config.Transport.AddressHTTP = dummy.Address
+	config.Transport.AddressGRPC = dummy.AddressGRPC
 	config.Agent.CryptoKey = dummy.CryptoKey
 
 	parsedReportInterval, _ := time.ParseDuration(dummy.ReportInterval)
@@ -180,15 +193,22 @@ func (config *Config) loadJSONConfiguration() {
 func (config *Config) loadAgentEnvConfiguration() {
 	config.logger.Info("Load env configuration")
 
-	err := env.Parse(&config.HTTP)
+	err := env.Parse(&config.Transport)
 	if err != nil {
-		config.logger.Fatal("loadAgentEnvConfiguration env.Parse config.HTTP", err)
+		config.logger.Fatal("loadAgentEnvConfiguration env.Parse config.Transport", err)
 	}
 
 	err = env.Parse(&config.Agent)
 	if err != nil {
 		config.logger.Fatal("loadAgentEnvConfiguration env.Parse config.Agent", err)
 	}
+}
+
+func (config *Config) selectProtocol() {
+	if config.Transport.AddressGRPC != "" {
+		config.Transport.Protocol = "grpc"
+	}
+	config.logger.Info(fmt.Sprintf("Agent transport protocol: %v", strings.ToUpper(config.Transport.Protocol)))
 }
 
 // isFlagPassed проверка указан ли флан при запуске программы

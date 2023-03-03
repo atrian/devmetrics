@@ -20,7 +20,7 @@ import (
 //	@Router /value/ [post]
 func (h *Handler) GetJSONMetric() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", h.config.HTTP.ContentType)
+		w.Header().Set("Content-Type", h.config.Transport.ContentType)
 		metricCandidate, err := h.unmarshallMetric(r.Body)
 
 		if err != nil {
